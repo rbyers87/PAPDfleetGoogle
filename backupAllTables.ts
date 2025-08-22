@@ -11,7 +11,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // 🔑 Google Drive setup
 const KEYFILE_PATH = "./fleet-backup-service-account.json"; // downloaded key
-const FOLDER_ID = process.env.GDRIVE_FOLDER_ID || "YOUR_DRIVE_FOLDER_ID"; // FleetBackups folder ID
+const FOLDER_ID = process.env.GDRIVE_FOLDER_ID || "1U5FWfXcBX93QqB4Kgk6dDu4EJ-A7NgVr"; // FleetBackups folder ID
 
 async function getAllTables(): Promise<string[]> {
   const { data, error } = await supabase.rpc("get_all_tables");
