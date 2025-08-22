@@ -6,12 +6,12 @@ import { google } from "googleapis";
 
 // === Supabase connection ===
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://htgcxuxigtjwvqcekizs.supabase.co";
-const SUPABASE_KEY = process.env.SUPABASE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0Z2N4dXhpZ3Rqd3ZxY2VraXpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3MTczMDgsImV4cCI6MjA3MTI5MzMwOH0.8bvZNTlqTte8agrT9JPz0qXFbfznqxvBhdW1A8wUMOA";
+const SUPABASE_KEY = process.env.SUPABASE_KEY || "...";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // === Google Drive setup ===
-const KEYFILE_PATH = "./fleet-backup-service-account.json"; // your downloaded JSON key
-const FOLDER_ID = process.env.GDRIVE_FOLDER_ID || "1U5FWfXcBX93QqB4Kgk6dDu4EJ-A7NgVr"; // from Drive URL
+const KEYFILE_PATH = "./fleet-backup-service-account.json";
+const FOLDER_ID = process.env.GDRIVE_FOLDER_ID || "1U5FWfXcBX93QqB4Kgk6dDu4EJ-A7NgVr";
 
 // --- Backup Logic ---
 async function getAllTables(): Promise<string[]> {
@@ -21,6 +21,25 @@ async function getAllTables(): Promise<string[]> {
     return [];
   }
   return data || [];
+}
+
+// --- Delete old backups ---
+async function deleteOldBackups(drive: any) {
+  const res = await drive.files.list({
+    q: `'${FOLDER_ID}' in parents and trashed = false`,
+    fields: "files(id, name, createdTime)",
+    orderBy: "createdTime desc",
+  });
+
+  const files = res.data.files || [];
+
+  if (files.length > 1) {
+    for (let i = 1; i < files.length; i++) {
+      const fileId = files[i].id;
+      await drive.files.delete({ fileId });
+      console.log(`🗑️ Deleted old backup: ${files[i].name}`);
+    }
+  }
 }
 
 async function backupAllTables() {
@@ -79,6 +98,10 @@ async function backupAllTables() {
   });
 
   const drive = google.drive({ version: "v3", auth });
+
+  // ✅ Delete old backups before uploading
+  await deleteOldBackups(drive);
+
   const fileMetadata = {
     name: zipFile,
     parents: [FOLDER_ID],
