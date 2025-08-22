@@ -5,13 +5,13 @@ import archiver from "archiver";
 import { google } from "googleapis";
 
 // === Supabase connection ===
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://htgcxuxigtjwvqcekizs.supabase.co";
-const SUPABASE_KEY = process.env.SUPABASE_KEY || "...";
+const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SUPABASE_KEY = process.env.SUPABASE_KEY!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // === Google Drive setup ===
 const KEYFILE_PATH = "./fleet-backup-service-account.json";
-const FOLDER_ID = process.env.GDRIVE_FOLDER_ID || "1U5FWfXcBX93QqB4Kgk6dDu4EJ-A7NgVr";
+const FOLDER_ID = process.env.GDRIVE_FOLDER_ID!;
 
 // --- Backup Logic ---
 async function getAllTables(): Promise<string[]> {
