@@ -5,7 +5,7 @@ import archiver from "archiver";
 import { google } from "googleapis";
 
 // 🔑 Supabase
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://YOUR_PROJECT.supabase.co";
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://htgcxuxigtjwvqcekizs.supabase.co";
 const SUPABASE_KEY = process.env.SUPABASE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0Z2N4dXhpZ3Rqd3ZxY2VraXpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3MTczMDgsImV4cCI6MjA3MTI5MzMwOH0.8bvZNTlqTte8agrT9JPz0qXFbfznqxvBhdW1A8wUMOA";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
