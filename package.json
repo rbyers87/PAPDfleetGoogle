@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist -b main"
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@microsoft/microsoft-graph-client": "^3.0.7",
