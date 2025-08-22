@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>
+      const segmentCount = window.location.pathname.split('/').length - 1;
+      sessionStorage.setItem('github_404_redirect', segmentCount);
+    </script>
+    <meta http-equiv="refresh" content="0; url=/YOUR_REPO_NAME/">
+    <title>Redirecting...</title>
+  </head>
+  <body>
+    <p>Redirecting to home page...</p>
+  </body>
+</html>
