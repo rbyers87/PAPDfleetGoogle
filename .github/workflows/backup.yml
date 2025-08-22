@@ -1,0 +1,22 @@
+name: Monthly Backup
+
+on:
+  schedule:
+    - cron: "0 0 1 * *"   # midnight on the 1st of every month
+  workflow_dispatch:       # allow manual trigger too
+
+jobs:
+  run-backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - run: npm install
+      - run: node backup.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
