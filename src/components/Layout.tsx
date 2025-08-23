@@ -20,7 +20,7 @@ import React from 'react';
       };
 
       const navItems = [
-        { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard1' },
+        { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/vehicles', icon: Car, label: 'Vehicles' },
         { path: '/work-orders', icon: ClipboardList, label: 'Work Orders' },
         ...(isAdmin ? [{ path: '/settings', icon: Settings, label: 'Settings' }] : []),
