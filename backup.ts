@@ -87,19 +87,19 @@ async function backupAllTables() {
     console.log(`✅ Saved ${table} (${data.length} rows)`);
   }
 
-  // Zip the folder
-  const zipFile = `${backupDir}.zip`;
-  await new Promise<void>((resolve, reject) => {
-    const output = fs.createWriteStream(zipFile);
-    const archive = archiver("zip", { zlib: { level: 9 } });
+// Zip the folder
+const zipFile = `${backupDir}.zip`;
+await new Promise<void>((resolve, reject) => {
+  const output = fs.createWriteStream(zipFile);
+  const archive = archiver("zip", { zlib: { level: 9 } });
 
-    output.on("close", () => resolve());
-    archive.on("error", (err) => reject(err));
+  output.on("close", () => resolve());
+  archive.on("error", (err: Error) => reject(err)); // ✅ type fixed
 
-    archive.pipe(output);
-    archive.directory(backupDir, false);
-    archive.finalize();
-  });
+  archive.pipe(output);
+  archive.directory(backupDir, false);
+  archive.finalize();
+});
 
   console.log(`📦 Backup zipped: ${zipFile}`);
 
