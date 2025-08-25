@@ -1,12 +1,24 @@
 import { createClient } from "@supabase/supabase-js";
 import { parse } from "json2csv";
-import fs from "fs";
+import * as fs from "fs";
 import archiver from "archiver";
 import { google } from "googleapis";
 
 // === Supabase connection ===
-const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_KEY = process.env.SUPABASE_KEY!;
+// Try both GitHub secrets style and Vite style
+const SUPABASE_URL =
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY =
+  process.env.SUPABASE_KEY ||
+  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || // preferred for backups
+  process.env.VITE_SUPABASE_ANON_KEY; // fallback if service key not set
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  throw new Error(
+    "❌ Missing Supabase environment variables. Please set SUPABASE_URL and SUPABASE_KEY (or VITE_ equivalents)."
+  );
+}
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // === Google Drive setup ===
@@ -82,7 +94,7 @@ async function backupAllTables() {
     const archive = archiver("zip", { zlib: { level: 9 } });
 
     output.on("close", () => resolve());
-    archive.on("error", (err: unknown) => reject(err));
+    archive.on("error", (err) => reject(err));
 
     archive.pipe(output);
     archive.directory(backupDir, false);
@@ -114,7 +126,7 @@ async function backupAllTables() {
 
   const response = await drive.files.create({
     requestBody: fileMetadata,
-    media,
+    media: media,
     fields: "id",
   });
 
