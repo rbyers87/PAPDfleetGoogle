@@ -6,17 +6,17 @@ import { google } from "googleapis";
 
 // --- Supabase connection ---
 const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_KEY = process.env.SUPABASE_KEY!;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!; // Changed to match your secret
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   throw new Error("❌ Missing Supabase environment variables.");
 }
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- Google Drive OAuth2 ---
-const CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID!;
-const CLIENT_SECRET = process.env.GOOGLE_DRIVE_CLIENT_SECRET!;
-const REFRESH_TOKEN = process.env.GOOGLE_DRIVE_REFRESH_TOKEN!;
-const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID!;
+const CLIENT_ID = process.env.GDRIVE_CLIENT_ID!; // Changed to match your secret
+const CLIENT_SECRET = process.env.GDRIVE_CLIENT_SECRET!; // Changed to match your secret
+const REFRESH_TOKEN = process.env.GDRIVE_REFRESH_TOKEN!; // Changed to match your secret
+const FOLDER_ID = process.env.GDRIVE_FOLDER_ID!; // Changed to match your secret
 if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN || !FOLDER_ID) {
   throw new Error("❌ Missing Google Drive OAuth2 environment variables.");
 }
