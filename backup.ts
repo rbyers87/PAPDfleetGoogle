@@ -27,12 +27,17 @@ if (!FOLDER_ID) throw new Error("❌ Missing GDRIVE_FOLDER_ID");
 
 // --- Backup Logic ---
 async function getAllTables(): Promise<string[]> {
-  const { data, error } = await supabase.rpc("get_all_tables");
+  const { data, error } = await supabase
+    .from("pg_tables")
+    .select("tablename")
+    .eq("schemaname", "public");
+
   if (error) {
     console.error("Error fetching table list:", error.message);
     return [];
   }
-  return data || [];
+
+  return data?.map((t: any) => t.tablename) || [];
 }
 
 // --- Delete old backups ---
