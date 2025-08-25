@@ -1,12 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { parse } from "json2csv";
-//import * as fs from "fs";
 import fs from "fs";
 import archiver from "archiver";
 import { google } from "googleapis";
 
 // === Supabase connection ===
-// Try both GitHub secrets style and Vite style
 const SUPABASE_URL =
   process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY =
@@ -25,6 +23,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // === Google Drive setup ===
 const KEYFILE_PATH = "./fleet-backup-service-account.json";
 const FOLDER_ID = process.env.GDRIVE_FOLDER_ID!;
+if (!FOLDER_ID) throw new Error("❌ Missing GDRIVE_FOLDER_ID");
 
 // --- Backup Logic ---
 async function getAllTables(): Promise<string[]> {
@@ -88,19 +87,19 @@ async function backupAllTables() {
     console.log(`✅ Saved ${table} (${data.length} rows)`);
   }
 
-// Zip the folder
-const zipFile = `${backupDir}.zip`;
-await new Promise<void>((resolve, reject) => {
-  const output = fs.createWriteStream(zipFile);
-  const archive = archiver("zip", { zlib: { level: 9 } });
+  // Zip the folder
+  const zipFile = `${backupDir}.zip`;
+  await new Promise<void>((resolve, reject) => {
+    const output = fs.createWriteStream(zipFile);
+    const archive = archiver("zip", { zlib: { level: 9 } });
 
-  output.on("close", () => resolve());
-  archive.on("error", (err: Error) => reject(err)); // ✅ type fixed
+    output.on("close", () => resolve());
+    archive.on("error", (err: Error) => reject(err));
 
-  archive.pipe(output);
-  archive.directory(backupDir, false);
-  archive.finalize();
-});
+    archive.pipe(output);
+    archive.directory(backupDir, false);
+    archive.finalize();
+  });
 
   console.log(`📦 Backup zipped: ${zipFile}`);
 
@@ -115,6 +114,8 @@ await new Promise<void>((resolve, reject) => {
   // ✅ Delete old backups before uploading
   await deleteOldBackups(drive);
 
+  console.log("📁 Uploading backup to Drive folder ID:", FOLDER_ID);
+
   const fileMetadata = {
     name: zipFile,
     parents: [FOLDER_ID],
@@ -128,9 +129,10 @@ await new Promise<void>((resolve, reject) => {
   const response = await drive.files.create({
     requestBody: fileMetadata,
     media: media,
-    fields: "id",
+    fields: "id, name, parents",
   });
 
+  console.log("Upload response:", response.data); // shows file ID, name, parents
   console.log(`☁️ Backup uploaded to Drive (File ID: ${response.data.id})`);
   console.log("🎉 Backup complete!");
 }
