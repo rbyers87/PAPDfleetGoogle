@@ -22,7 +22,7 @@ jobs:
         run: npm install
 
       - name: Build backup script
-        run: npx tsc backup.ts --outDir dist --module commonjs
+        run: npx tsc backup.ts --outDir dist --module commonjs --target ES2020 --esModuleInterop true --skipLibCheck true --moduleResolution node
 
       - name: Verify backup.js exists
         run: ls -la dist/ && ls -la dist/backup.js || echo "backup.js not found"
