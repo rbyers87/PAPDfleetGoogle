@@ -24,8 +24,11 @@ jobs:
       - name: Build backup script
         run: npx tsc backup.ts --outDir dist --module commonjs --target ES2020 --esModuleInterop true --skipLibCheck true --moduleResolution node
 
-      - name: Verify backup.js exists
-        run: ls -la dist/ && ls -la dist/backup.js || echo "backup.js not found"
+      - name: Rename to .cjs extension
+        run: mv dist/backup.js dist/backup.cjs
+
+      - name: Verify backup.cjs exists
+        run: ls -la dist/ && ls -la dist/backup.cjs || echo "backup.cjs not found"
 
       - name: Run backup
         env:
@@ -35,4 +38,4 @@ jobs:
           GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
           GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
-        run: node dist/backup.js
+        run: node dist/backup.cjs
