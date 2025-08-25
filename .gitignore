@@ -15,7 +15,7 @@ dist-ssr
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-//fleet-backup-service-account.json
+
 .idea
 .DS_Store
 *.suo
