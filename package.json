@@ -19,7 +19,6 @@
     "archiver": "^7.0.1",
     "clsx": "^2.1.0",
     "date-fns": "^3.3.1",
-    "fs": "^0.0.1-security",
     "gh-pages": "^6.3.0",
     "googleapis": "^157.0.0",
     "isomorphic-fetch": "^3.0.0",
