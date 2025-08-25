@@ -13,10 +13,10 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- Google Drive OAuth2 ---
-const CLIENT_ID = process.env.GDRIVE_CLIENT_ID!;
-const CLIENT_SECRET = process.env.GDRIVE_CLIENT_SECRET!;
-const REFRESH_TOKEN = process.env.GDRIVE_REFRESH_TOKEN!;
-const FOLDER_ID = process.env.GDRIVE_FOLDER_ID!;
+const CLIENT_ID = process.env.GOOGLE_DRIVE_CLIENT_ID!;
+const CLIENT_SECRET = process.env.GOOGLE_DRIVE_CLIENT_SECRET!;
+const REFRESH_TOKEN = process.env.GOOGLE_DRIVE_REFRESH_TOKEN!;
+const FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID!;
 if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN || !FOLDER_ID) {
   throw new Error("❌ Missing Google Drive OAuth2 environment variables.");
 }
