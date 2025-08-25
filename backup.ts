@@ -27,17 +27,14 @@ if (!FOLDER_ID) throw new Error("❌ Missing GDRIVE_FOLDER_ID");
 
 // --- Backup Logic ---
 async function getAllTables(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("pg_tables")
-    .select("tablename")
-    .eq("schemaname", "public");
-
-  if (error) {
-    console.error("Error fetching table list:", error.message);
-    return [];
-  }
-
-  return data?.map((t: any) => t.tablename) || [];
+  // Hardcoded table names
+  return [
+    "profiles",
+    "vehicle_status_history",
+    "vehicles",
+    "work_order_settings",
+    "work_orders",
+  ];
 }
 
 // --- Delete old backups ---
@@ -137,7 +134,7 @@ async function backupAllTables() {
     fields: "id, name, parents",
   });
 
-  console.log("Upload response:", response.data); // shows file ID, name, parents
+  console.log("Upload response:", response.data);
   console.log(`☁️ Backup uploaded to Drive (File ID: ${response.data.id})`);
   console.log("🎉 Backup complete!");
 }
