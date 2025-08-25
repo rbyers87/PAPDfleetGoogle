@@ -2,31 +2,31 @@ name: Database Backup
 
 on:
   schedule:
-    - cron: "0 3 * * *" # Runs daily at 3AM UTC
-  workflow_dispatch: # allow manual run
+    - cron: "0 3 * * *" # every day at 3 AM UTC
+  workflow_dispatch:
 
 jobs:
   backup:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Use Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20 # upgrade from 18
 
       - name: Install dependencies
         run: npm install
 
-      - name: Build TypeScript
+      - name: Build backup script
         run: npm run build:backup
 
-      - name: Run Backup Script
-        run: node dist/backup.js
+      - name: Run backup
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: node dist/backup.js
