@@ -20,8 +20,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Compile TypeScript
-        run: npx tsc
+      - name: Compile Backup Script
+        run: npm run build:backup
+
 
       - name: Run backup script
         run: node dist/backup.js
