@@ -4,100 +4,81 @@ import fs from "fs";
 import archiver from "archiver";
 import { google } from "googleapis";
 
-// === Supabase connection ===
-const SUPABASE_URL =
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY =
-  process.env.SUPABASE_KEY ||
-  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || // preferred for backups
-  process.env.VITE_SUPABASE_ANON_KEY; // fallback if service key not set
-
+// --- Supabase connection ---
+const SUPABASE_URL = process.env.SUPABASE_URL!;
+const SUPABASE_KEY = process.env.SUPABASE_KEY!;
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-  throw new Error(
-    "❌ Missing Supabase environment variables. Please set SUPABASE_URL and SUPABASE_KEY (or VITE_ equivalents)."
-  );
+  throw new Error("❌ Missing Supabase environment variables.");
 }
-
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// === Google Drive setup ===
-const KEYFILE_PATH = "./fleet-backup-service-account.json";
+// --- Google Drive OAuth2 ---
+const CLIENT_ID = process.env.GDRIVE_CLIENT_ID!;
+const CLIENT_SECRET = process.env.GDRIVE_CLIENT_SECRET!;
+const REFRESH_TOKEN = process.env.GDRIVE_REFRESH_TOKEN!;
 const FOLDER_ID = process.env.GDRIVE_FOLDER_ID!;
-if (!FOLDER_ID) throw new Error("❌ Missing GDRIVE_FOLDER_ID");
-
-// --- Backup Logic ---
-async function getAllTables(): Promise<string[]> {
-  // Hardcoded table names
-  return [
-    "profiles",
-    "vehicle_status_history",
-    "vehicles",
-    "work_order_settings",
-    "work_orders",
-  ];
+if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN || !FOLDER_ID) {
+  throw new Error("❌ Missing Google Drive OAuth2 environment variables.");
 }
 
+const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET);
+oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+const drive = google.drive({ version: "v3", auth: oauth2Client });
+
+// --- Backup tables ---
+const TABLES = [
+  "profiles",
+  "vehicle_status_history",
+  "vehicles",
+  "work_order_settings",
+  "work_orders",
+];
+
 // --- Delete old backups ---
-async function deleteOldBackups(drive: any) {
+async function deleteOldBackups() {
   const res = await drive.files.list({
     q: `'${FOLDER_ID}' in parents and trashed = false`,
     fields: "files(id, name, createdTime)",
     orderBy: "createdTime desc",
   });
-
   const files = res.data.files || [];
-
   if (files.length > 1) {
     for (let i = 1; i < files.length; i++) {
-      const fileId = files[i].id;
-      await drive.files.delete({ fileId });
+      await drive.files.delete({ fileId: files[i].id! });
       console.log(`🗑️ Deleted old backup: ${files[i].name}`);
     }
   }
 }
 
+// --- Backup function ---
 async function backupAllTables() {
   console.log("🚓 Starting database backup...");
-
-  const tables = await getAllTables();
-  if (tables.length === 0) {
-    console.log("No tables found.");
-    return;
-  }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const backupDir = `db_backup_${timestamp}`;
   fs.mkdirSync(backupDir);
 
-  // Export each table to CSV
-  for (const table of tables) {
-    console.log(`📑 Backing up: ${table}`);
+  for (const table of TABLES) {
     const { data, error } = await supabase.from(table).select("*");
-
     if (error) {
       console.error(`❌ Error fetching ${table}:`, error.message);
       continue;
     }
-
     if (!data || data.length === 0) {
       console.log(`(empty) ${table}`);
       continue;
     }
-
     const csv = parse(data);
     fs.writeFileSync(`${backupDir}/${table}.csv`, csv);
     console.log(`✅ Saved ${table} (${data.length} rows)`);
   }
 
-  // Zip the folder
   const zipFile = `${backupDir}.zip`;
   await new Promise<void>((resolve, reject) => {
     const output = fs.createWriteStream(zipFile);
     const archive = archiver("zip", { zlib: { level: 9 } });
-
     output.on("close", () => resolve());
     archive.on("error", (err: Error) => reject(err));
-
     archive.pipe(output);
     archive.directory(backupDir, false);
     archive.finalize();
@@ -105,37 +86,17 @@ async function backupAllTables() {
 
   console.log(`📦 Backup zipped: ${zipFile}`);
 
-  // Upload to Google Drive
-  const auth = new google.auth.GoogleAuth({
-    keyFile: KEYFILE_PATH,
-    scopes: ["https://www.googleapis.com/auth/drive.file"],
-  });
+  await deleteOldBackups();
 
-  const drive = google.drive({ version: "v3", auth });
-
-  // ✅ Delete old backups before uploading
-  await deleteOldBackups(drive);
-
-  console.log("📁 Uploading backup to Drive folder ID:", FOLDER_ID);
-
-  const fileMetadata = {
-    name: zipFile,
-    parents: [FOLDER_ID],
-  };
-
-  const media = {
-    mimeType: "application/zip",
-    body: fs.createReadStream(zipFile),
-  };
-
+  const fileMetadata = { name: zipFile, parents: [FOLDER_ID] };
+  const media = { mimeType: "application/zip", body: fs.createReadStream(zipFile) };
   const response = await drive.files.create({
     requestBody: fileMetadata,
-    media: media,
+    media,
     fields: "id, name, parents",
   });
 
-  console.log("Upload response:", response.data);
-  console.log(`☁️ Backup uploaded to Drive (File ID: ${response.data.id})`);
+  console.log("☁️ Backup uploaded to Drive (File ID:", response.data.id, ")");
   console.log("🎉 Backup complete!");
 }
 
