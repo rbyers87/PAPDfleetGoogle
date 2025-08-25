@@ -24,6 +24,9 @@ jobs:
       - name: Build backup script
         run: npm run build:backup
 
+      - name: Write service account key
+        run: echo '${{ secrets.GDRIVE_JSON }}' > fleet-backup-service-account.json
+
       - name: Run backup
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
