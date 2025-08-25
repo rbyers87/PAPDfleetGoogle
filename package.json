@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:backup": "tsc",
+    "build:backup": "tsc backup.ts --outDir dist --module commonjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",
