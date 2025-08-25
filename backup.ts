@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { parse } from "json2csv";
 import * as fs from "fs";
-import archiver from "archiver";
+import * as archiver from "archiver";
 import { google } from "googleapis";
 
 // === Supabase connection ===
@@ -79,10 +79,10 @@ async function backupAllTables() {
   const zipFile = `${backupDir}.zip`;
   await new Promise<void>((resolve, reject) => {
     const output = fs.createWriteStream(zipFile);
-    const archive = archiver("zip", { zlib: { level: 9 } });
+    const archive = archiver.create("zip", { zlib: { level: 9 } });
 
     output.on("close", () => resolve());
-    archive.on("error", (err) => reject(err));
+    archive.on("error", (err: Error) => reject(err));
 
     archive.pipe(output);
     archive.directory(backupDir, false);
