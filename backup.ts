@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { parse } from "json2csv";
-import fs from "fs";
+import * as fs from "fs";
 import archiver from "archiver";
 import { google } from "googleapis";
 
