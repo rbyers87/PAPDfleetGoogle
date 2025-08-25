@@ -22,7 +22,10 @@ jobs:
         run: npm install
 
       - name: Build backup script
-        run: npm run build
+        run: npm run build:backup
+
+      - name: Verify backup.js exists
+        run: ls -la dist/ && ls -la dist/backup.js || echo "backup.js not found"
 
       - name: Run backup
         env:
