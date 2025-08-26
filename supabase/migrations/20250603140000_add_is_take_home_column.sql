@@ -1,0 +1,2 @@
+ALTER TABLE vehicles
+ADD COLUMN is_take_home BOOLEAN DEFAULT FALSE;

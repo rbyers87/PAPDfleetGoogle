@@ -25,6 +25,7 @@ interface Vehicle {
   assigned_to: string | null;
   current_location: string | null;
   notes: string | null;
+  is_take_home: boolean; // New property
   profile?: {
     full_name: string;
     badge_number: string;
@@ -42,6 +43,7 @@ function Vehicles() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | undefined>(undefined);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedHistoryVehicle, setSelectedHistoryVehicle] = useState<{ id: string; unitNumber: string } | null>(null);
+  const [showTakeHome, setShowTakeHome] = useState(false); // New state for Take Home filter
 
   useEffect(() => {
     fetchVehicles();
@@ -87,6 +89,14 @@ function Vehicles() {
 
   const filteredVehicles = vehicles.filter(vehicle => {
     const matchesStatus = statusFilter === 'all' || vehicle.status === statusFilter;
+    
+    let matchesTakeHome = true;
+    if (statusFilter === 'available') {
+      if (showTakeHome === false) {
+        matchesTakeHome = !vehicle.is_take_home;
+      }
+    }
+
     const matchesSearch = 
       searchQuery === '' ||
       vehicle.unit_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -94,7 +104,7 @@ function Vehicles() {
       vehicle.current_location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       vehicle.profile?.full_name.toLowerCase().includes(searchQuery.toLowerCase());
     
-    return matchesStatus && matchesSearch;
+    return matchesStatus && matchesSearch && matchesTakeHome;
   });
 
   const getStatusBadgeClass = (status: string) => {
@@ -185,6 +195,15 @@ function Vehicles() {
               <option value="assigned">Assigned</option>
               <option value="out_of_service">Out of Service</option>
             </select>
+            <label className="inline-flex items-center">
+              <input
+                type="checkbox"
+                className="form-checkbox h-5 w-5 text-blue-600"
+                checked={showTakeHome}
+                onChange={(e) => setShowTakeHome(e.target.checked)}
+              />
+              <span className="ml-2 text-gray-700">Take Home</span>
+            </label>
           </div>
         </div>
 
@@ -229,6 +248,14 @@ function Vehicles() {
                         <strong>Notes:</strong> {vehicle.notes}
                       </p>
                     )}
+                  </div>
+                )}
+
+                {vehicle.is_take_home && (
+                  <div className="mb-4 p-3 bg-green-50 rounded-lg">
+                    <p className="text-sm text-green-800">
+                      <strong>Take Home Unit</strong>
+                    </p>
                   </div>
                 )}
 

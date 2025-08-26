@@ -1,13 +1,15 @@
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
-if (typeof pdfMake !== 'undefined' && pdfFonts && pdfFonts.pdfMake && pdfFonts.pdfMake.vfs) {
-    (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
-} else {
-    console.error("pdfMake or pdfFonts are not properly initialized.");
+try {
+    if (typeof pdfMake !== 'undefined') {
+        (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
+    } else {
+        console.error("pdfMake is not properly initialized.");
+    }
+} catch (error) {
+    console.error("Error initializing pdfMake:", error);
 }
-
-
 
 export function generateWorkOrderPDF(workOrder: {
     work_order_number: number;

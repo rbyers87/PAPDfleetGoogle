@@ -22,6 +22,7 @@ interface VehicleModalProps {
     assigned_to: string | null;
     current_location: string | null;
     notes: string | null;
+    is_take_home: boolean; // New property
   };
   onVehicleUpdate: () => void;
 }
@@ -36,6 +37,7 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
     assigned_to: '',
     current_location: '',
     notes: '',
+    is_take_home: false, // New property
   });
   const [officers, setOfficers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,6 +55,7 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
         assigned_to: vehicle.assigned_to || '',
         current_location: vehicle.current_location || '',
         notes: vehicle.notes || '',
+        is_take_home: vehicle.is_take_home, // New property
       });
     } else {
       setFormData({
@@ -64,6 +67,7 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
         assigned_to: '',
         current_location: '',
         notes: '',
+        is_take_home: false, // New property
       });
     }
   }, [vehicle]);
@@ -97,6 +101,7 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
         assigned_to: formData.status === 'assigned' ? formData.assigned_to : null,
         current_location: formData.status === 'out_of_service' ? formData.current_location : null,
         notes: ['out_of_service', 'assigned'].includes(formData.status) ? formData.notes : null,
+        is_take_home: formData.is_take_home, // Include the new property
       };
 
       if (vehicle) {
@@ -108,6 +113,7 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
             assigned_to: vehicleData.assigned_to,
             current_location: vehicleData.current_location,
             notes: vehicleData.notes,
+            is_take_home: vehicleData.is_take_home, // Update the new property
           })
           .eq('id', vehicle.id);
 
@@ -326,6 +332,18 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
                 />
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Take Home Unit?
+              </label>
+              <input
+                type="checkbox"
+                checked={formData.is_take_home}
+                onChange={(e) => setFormData({ ...formData, is_take_home: e.target.checked })}
+                className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+            </div>
 
             <div className="flex justify-end gap-4 pt-4 border-t">
               <button
