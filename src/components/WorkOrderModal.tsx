@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
+import { generateWorkOrderPDF } from "../utils/pdfGenerator";
+
 
 interface WorkOrderModalProps {
   isOpen: boolean;
@@ -167,6 +169,20 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
             >
               {loading ? 'Creating...' : 'Create Work Order'}
             </button>
+						<button
+  onClick={() =>
+    generateWorkOrderPDF({
+      unitNumber: unitNumber,
+      issue: workOrder.issue,
+      notes: workOrder.notes,
+      reportedBy: workOrder.reportedBy,
+      createdAt: workOrder.createdAt,
+    })
+  }
+  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+>
+  Download PDF
+</button>
           </div>
         </form>
       </div>

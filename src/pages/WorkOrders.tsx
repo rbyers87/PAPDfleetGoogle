@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
+import { generateWorkOrderPDF } from '../utils/pdfGenerator';
 import {
   ClipboardList,
   AlertCircle,
@@ -9,7 +10,7 @@ import {
   AlertTriangle,
   Search,
   Filter,
-  Plus
+  Download
 } from 'lucide-react';
 
 interface WorkOrder {
@@ -216,6 +217,20 @@ function WorkOrders() {
     return matchesStatus && matchesPriority && matchesSearch;
   });
 
+  const handleDownloadPDF = (workOrder: WorkOrder) => {
+    if (workOrder && workOrder.vehicle) {
+      generateWorkOrderPDF({
+        work_order_number: workOrder.work_order_number || 0,
+        unitNumber: workOrder.vehicle.unit_number,
+        description: workOrder.description,
+        priority: workOrder.priority,
+        location: workOrder.location,
+        mileage: 'N/A', // Mileage is not available in the work order object
+        created_at: workOrder.created_at,
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -306,6 +321,13 @@ function WorkOrders() {
                     </p>
                   </div>
                   <div className="flex gap-2">
+                    <button
+                      onClick={() => handleDownloadPDF(order)}
+                      className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-500"
+                    >
+                      <Download className="w-4 h-4 mr-1 inline-block" />
+                      Download PDF
+                    </button>
                     {isAdmin && order.status === 'pending' && (
                       <button
                         onClick={() => {
