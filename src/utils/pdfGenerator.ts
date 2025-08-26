@@ -1,11 +1,8 @@
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts"; // <-- add this line
 
-if (typeof pdfMake !== 'undefined' && pdfFonts && pdfFonts.pdfMake && pdfFonts.pdfMake.vfs) {
-    (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
-} else {
-    console.error("pdfMake or pdfFonts are not properly initialized.");
-}
+pdfMake.vfs = pdfFonts.pdfMake.vfs; // <-- assign the vfs
+
 
 export function generateWorkOrderPDF(workOrder: {
     work_order_number: number;
