@@ -1,12 +1,10 @@
 // src/utils/pdfGenerator.ts
-import pdfMake from "pdfmake/build/pdfmake.min";
+import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
 import logo from "../assets/logo.png"; // Vite handles this import
 
-// ✅ Wire up fonts correctly - check if vfs exists first
-if (pdfMake.vfs === undefined) {
-  pdfMake.vfs = pdfFonts.pdfMake?.vfs || pdfFonts.vfs;
-}
+// ✅ For pdfMake 0.2.20 - set up VFS correctly
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 // Helper: convert an image URL to base64 for pdfmake
 async function getBase64Image(url: string): Promise<string> {
