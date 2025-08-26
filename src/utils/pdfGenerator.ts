@@ -1,63 +1,48 @@
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
+// src/utils/pdfGenerator.ts
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
+import logo from "../assets/logo.png"; // Vite handles this import
 
-try {
-    if (typeof pdfMake !== 'undefined') {
-        (pdfMake as any).vfs = pdfFonts.pdfMake.vfs;
-    } else {
-        console.error("pdfMake is not properly initialized.");
-    }
-} catch (error) {
-    console.error("Error initializing pdfMake:", error);
+// ✅ Wire up fonts correctly
+(pdfMake as any).vfs = pdfFonts.vfs;
+
+// Helper: convert an image URL to base64 for pdfmake
+async function getBase64Image(url: string): Promise<string> {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.readAsDataURL(blob);
+  });
 }
 
-export function generateWorkOrderPDF(workOrder: {
-    work_order_number: number;
-    unitNumber: string;
-    description: string;
-    priority: string;
-    location: string;
-    mileage: string;
-    created_at: string;
-}) {
+export async function generateWorkOrderPDF(workOrder: any) {
+  try {
+    // Convert logo.png → base64
+    const logoBase64 = await getBase64Image(logo);
+
     const docDefinition = {
-        content: [
-            {
-                columns: [
-                    {
-                        image: 'logo',
-                        width: 80
-                    },
-                    {
-                        text: 'Police Fleet Maintenance',
-                        style: 'header',
-                        alignment: 'right'
-                    }
-                ]
-            },
-            { text: `Work Order #${workOrder.work_order_number}`, style: 'subheader', margin: [0, 20, 0, 10] },
-            {
-                table: {
-                    widths: ['auto', '*'],
-                    body: [
-                        ['Unit Number', workOrder.unitNumber],
-                        ['Description', workOrder.description],
-                        ['Priority', workOrder.priority],
-                        ['Location', workOrder.location],
-                        ['Mileage', workOrder.mileage],
-                        ['Created At', new Date(workOrder.created_at).toLocaleString()]
-                    ]
-                }
-            }
-        ],
-        styles: {
-            header: { fontSize: 18, bold: true },
-            subheader: { fontSize: 14, bold: true }
+      content: [
+        { image: logoBase64, width: 120, alignment: "center", margin: [0, 0, 0, 20] },
+        { text: `Work Order #${workOrder.work_order_number}`, style: "header" },
+        { text: `Unit: ${workOrder.unitNumber}`, margin: [0, 5, 0, 0] },
+        { text: `Issue: ${workOrder.issue}`, margin: [0, 5, 0, 0] },
+        { text: `Notes: ${workOrder.notes}`, margin: [0, 5, 0, 0] },
+        { text: `Reported By: ${workOrder.reportedBy}`, margin: [0, 5, 0, 0] },
+        { text: `Created: ${workOrder.createdAt}`, margin: [0, 5, 0, 0] },
+      ],
+      styles: {
+        header: {
+          fontSize: 18,
+          bold: true,
+          margin: [0, 0, 0, 10],
         },
-        images: {
-            logo: '/assets/logo.png' // make sure logo.png is in public/assets
-        }
+      },
     };
 
-    return pdfMake.createPdf(docDefinition).download(`work_order_${workOrder.work_order_number}.pdf`);
+    pdfMake.createPdf(docDefinition).download(`work_order_${workOrder.work_order_number}.pdf`);
+  } catch (err) {
+    console.error("Error generating PDF:", err);
+  }
 }
