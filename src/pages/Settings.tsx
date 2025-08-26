@@ -131,6 +131,7 @@ function Settings() {
       const { data, error } = await supabase
         .from('vehicles')
         .select('*')
+        .eq('is_archived', false) // Only fetch non-archived vehicles
         .order('unit_number');
 
       if (error) throw error;
@@ -320,37 +321,16 @@ function Settings() {
     try {
       setError(null);
       
-      // Check if vehicle has any related records
-      const { data: workOrders, error: workOrderError } = await supabase
-        .from('work_orders')
-        .select('id')
-        .eq('vehicle_id', deleteConfirmation.vehicleId)
-        .limit(1);
-
-      if (workOrderError) throw workOrderError;
-
-      const { data: statusHistory, error: statusError } = await supabase
-        .from('vehicle_status_history')
-        .select('id')
-        .eq('vehicle_id', deleteConfirmation.vehicleId)
-        .limit(1);
-
-      if (statusError) throw statusError;
-
-      if (workOrders && workOrders.length > 0) {
-        setError('Cannot delete vehicle with existing work orders. Archive the vehicle instead.');
-        return;
-      }
-
-      if (statusHistory && statusHistory.length > 0) {
-        setError('Cannot delete vehicle with status history. Archive the vehicle instead.');
-        return;
-      }
-
-      // If no related records, proceed with deletion
+      const { session } = useAuthStore.getState();
+      
+      // Archive the vehicle instead of deleting
       const { error } = await supabase
         .from('vehicles')
-        .delete()
+        .update({
+          is_archived: true,
+          archived_at: new Date().toISOString(),
+          archived_by: session?.user?.id
+        })
         .eq('id', deleteConfirmation.vehicleId);
 
       if (error) throw error;
@@ -358,7 +338,7 @@ function Settings() {
       setDeleteConfirmation({ isOpen: false, vehicleId: '', unitNumber: '' });
       fetchVehicles();
     } catch (err) {
-      setError('Failed to delete vehicle');
+      setError('Failed to archive vehicle');
       console.error('Error:', err);
     }
   }
@@ -837,7 +817,7 @@ function Settings() {
           <div className="bg-white rounded-lg w-full max-w-md mx-4">
             <div className="p-6 border-b">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-red-600">Delete Vehicle</h2>
+                <h2 className="text-xl font-semibold text-red-600">Archive Vehicle</h2>
                 <button
                   onClick={() => setDeleteConfirmation({ isOpen: false, vehicleId: '', unitNumber: '' })}
                   className="text-gray-400 hover:text-gray-500"
@@ -851,10 +831,10 @@ function Settings() {
                 <AlertCircle className="w-8 h-8 text-red-500 mr-3" />
                 <div>
                   <p className="text-gray-900 font-medium">
-                    Are you sure you want to delete Unit #{deleteConfirmation.unitNumber}?
+                    Are you sure you want to archive Unit #{deleteConfirmation.unitNumber}?
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    This action cannot be undone. If the vehicle has work orders or history, consider archiving instead.
+                    This will hide the vehicle from the active fleet but preserve all historical data. You can restore it later if needed.
                   </p>
                 </div>
               </div>
@@ -869,7 +849,7 @@ function Settings() {
                   onClick={handleDeleteVehicle}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                 >
-                  Delete Vehicle
+                  Archive Vehicle
                 </button>
               </div>
             </div>
