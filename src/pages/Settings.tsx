@@ -61,6 +61,15 @@ function Settings() {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [showNewVehicleForm, setShowNewVehicleForm] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    vehicleId: string;
+    unitNumber: string;
+  }>({
+    isOpen: false,
+    vehicleId: '',
+    unitNumber: ''
+  });
 
   // Form states
   const [newProfile, setNewProfile] = useState({
@@ -136,21 +145,19 @@ function Settings() {
 
   async function fetchWorkOrderSettings() {
     try {
-      // First, try to get existing settings
       const { data, error } = await supabase
         .from('work_order_settings')
         .select('*')
         .limit(1)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 means no rows found
+      if (error && error.code !== 'PGRST116') {
         throw error;
       }
 
       if (data) {
         setWorkOrderSettings(data);
       }
-      // If no data found, keep the default settings
     } catch (err) {
       setError('Failed to fetch work order settings');
       console.error('Error:', err);
@@ -164,7 +171,6 @@ function Settings() {
       setError(null);
       
       if (workOrderSettings.id) {
-        // Update existing settings
         const { error } = await supabase
           .from('work_order_settings')
           .update(workOrderSettings)
@@ -172,7 +178,6 @@ function Settings() {
 
         if (error) throw error;
       } else {
-        // Insert new settings
         const { data, error } = await supabase
           .from('work_order_settings')
           .insert([workOrderSettings])
@@ -186,7 +191,6 @@ function Settings() {
         }
       }
 
-      // Show success message (you could add a toast notification here)
       console.log('Settings saved successfully');
     } catch (err) {
       setError('Failed to save work order settings');
@@ -194,14 +198,11 @@ function Settings() {
     }
   }
 
-  // ... (keep all your existing functions: handleCreateUser, handleUpdateProfile, etc.)
-
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
     try {
-      // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newProfile.email,
         password: newProfile.password,
@@ -213,7 +214,6 @@ function Settings() {
       if (authError) throw authError;
 
       if (authData.user) {
-        // Create profile
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([{
@@ -315,6 +315,61 @@ function Settings() {
       console.error('Error:', err);
     }
   }
+
+  async function handleDeleteVehicle() {
+    try {
+      setError(null);
+      
+      // Check if vehicle has any related records
+      const { data: workOrders, error: workOrderError } = await supabase
+        .from('work_orders')
+        .select('id')
+        .eq('vehicle_id', deleteConfirmation.vehicleId)
+        .limit(1);
+
+      if (workOrderError) throw workOrderError;
+
+      const { data: statusHistory, error: statusError } = await supabase
+        .from('vehicle_status_history')
+        .select('id')
+        .eq('vehicle_id', deleteConfirmation.vehicleId)
+        .limit(1);
+
+      if (statusError) throw statusError;
+
+      if (workOrders && workOrders.length > 0) {
+        setError('Cannot delete vehicle with existing work orders. Archive the vehicle instead.');
+        return;
+      }
+
+      if (statusHistory && statusHistory.length > 0) {
+        setError('Cannot delete vehicle with status history. Archive the vehicle instead.');
+        return;
+      }
+
+      // If no related records, proceed with deletion
+      const { error } = await supabase
+        .from('vehicles')
+        .delete()
+        .eq('id', deleteConfirmation.vehicleId);
+
+      if (error) throw error;
+
+      setDeleteConfirmation({ isOpen: false, vehicleId: '', unitNumber: '' });
+      fetchVehicles();
+    } catch (err) {
+      setError('Failed to delete vehicle');
+      console.error('Error:', err);
+    }
+  }
+
+  const openDeleteConfirmation = (vehicle: Vehicle) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      vehicleId: vehicle.id,
+      unitNumber: vehicle.unit_number
+    });
+  };
 
   const filteredProfiles = profiles.filter(profile =>
     (profile.full_name && profile.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -534,7 +589,6 @@ function Settings() {
       {/* Users Tab Content */}
       {activeTab === 'users' && (
         <div className="bg-white shadow rounded-lg overflow-hidden">
-          {/* ... your existing users table code ... */}
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -652,7 +706,6 @@ function Settings() {
       {/* Vehicles Tab Content */}
       {activeTab === 'vehicles' && (
         <div className="bg-white shadow rounded-lg overflow-hidden">
-          {/* ... your existing vehicles table code ... */}
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -755,12 +808,20 @@ function Settings() {
                         </button>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => setEditingVehicle(vehicle)}
-                        className="text-blue-800 hover:text-blue-900"
-                      >
-                        <Edit2 className="w-5 h-5" />
-                      </button>
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => setEditingVehicle(vehicle)}
+                          className="text-blue-800 hover:text-blue-900"
+                        >
+                          <Edit2 className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => openDeleteConfirmation(vehicle)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -770,7 +831,51 @@ function Settings() {
         </div>
       )}
 
-      {/* ... keep all your existing modal code for new user and new vehicle forms ... */}
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-md mx-4">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-red-600">Delete Vehicle</h2>
+                <button
+                  onClick={() => setDeleteConfirmation({ isOpen: false, vehicleId: '', unitNumber: '' })}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <AlertCircle className="w-8 h-8 text-red-500 mr-3" />
+                <div>
+                  <p className="text-gray-900 font-medium">
+                    Are you sure you want to delete Unit #{deleteConfirmation.unitNumber}?
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    This action cannot be undone. If the vehicle has work orders or history, consider archiving instead.
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setDeleteConfirmation({ isOpen: false, vehicleId: '', unitNumber: '' })}
+                  className="px-4 py-2 text-gray-700 hover:text-gray-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteVehicle}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Delete Vehicle
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New User Modal */}
       {showNewUserForm && (
