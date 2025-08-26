@@ -26,3 +26,5 @@ next step to get work orders to download as pdf from claude.ai need to install d
 Step 1: Install the missing TypeScript types
 First, add the TypeScript types for pdfMake:
 npm install --save-dev @types/pdfmake
+
+remove take home box from "all status" because it doesn't do anything.
