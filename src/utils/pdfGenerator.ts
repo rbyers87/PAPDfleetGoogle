@@ -1,10 +1,12 @@
 // src/utils/pdfGenerator.ts
-import pdfMake from "pdfmake/build/pdfmake";
+import pdfMake from "pdfmake/build/pdfmake.min";
 import pdfFonts from "pdfmake/build/vfs_fonts";
 import logo from "../assets/logo.png"; // Vite handles this import
 
-// ✅ Wire up fonts correctly
-(pdfMake as any).vfs = pdfFonts.vfs;
+// ✅ Wire up fonts correctly - check if vfs exists first
+if (pdfMake.vfs === undefined) {
+  pdfMake.vfs = pdfFonts.pdfMake?.vfs || pdfFonts.vfs;
+}
 
 // Helper: convert an image URL to base64 for pdfmake
 async function getBase64Image(url: string): Promise<string> {
@@ -21,7 +23,7 @@ export async function generateWorkOrderPDF(workOrder: any) {
   try {
     // Convert logo.png → base64
     const logoBase64 = await getBase64Image(logo);
-
+    
     const docDefinition = {
       content: [
         { image: logoBase64, width: 120, alignment: "center", margin: [0, 0, 0, 20] },
@@ -40,7 +42,7 @@ export async function generateWorkOrderPDF(workOrder: any) {
         },
       },
     };
-
+    
     pdfMake.createPdf(docDefinition).download(`work_order_${workOrder.work_order_number}.pdf`);
   } catch (err) {
     console.error("Error generating PDF:", err);
