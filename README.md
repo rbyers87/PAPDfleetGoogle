@@ -21,3 +21,8 @@ function App() {
     </Router>
   );
 }
+
+next step to get work orders to download as pdf from claude.ai need to install dependecies:
+Step 1: Install the missing TypeScript types
+First, add the TypeScript types for pdfMake:
+npm install --save-dev @types/pdfmake
