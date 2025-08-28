@@ -217,7 +217,7 @@ function Settings() {
       if (authData.user) {
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert([{
+          .upsert([{
             id: authData.user.id,
             role: newProfile.role,
             full_name: newProfile.full_name,
