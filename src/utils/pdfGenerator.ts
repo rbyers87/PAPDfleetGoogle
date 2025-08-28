@@ -40,241 +40,161 @@ export async function generateWorkOrderPDF(workOrder: any) {
     const createdByBadge = workOrder.creator?.badge_number ? `(Badge #${workOrder.creator.badge_number})` : '';
 
     // Create HTML content for the work order
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Work Order ${getValue(workOrder.work_order_number)}</title>
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          
-          body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            background: white;
-          }
-          
-          .header {
-            text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 3px solid #007bff;
-            padding-bottom: 20px;
-          }
-          
-          .title {
-            font-size: 28px;
-            font-weight: bold;
-            color: #007bff;
-            margin-bottom: 10px;
-          }
-          
-          .subtitle {
-            font-size: 16px;
-            color: #666;
-          }
-          
-          .content {
-            margin-bottom: 30px;
-          }
-          
-          .field {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-left: 4px solid #007bff;
-            border-radius: 0 5px 5px 0;
-          }
-          
-          .field-label {
-            font-weight: bold;
-            font-size: 14px;
-            color: #495057;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
-          }
-          
-          .field-value {
-            font-size: 16px;
-            color: #212529;
-            word-wrap: break-word;
-          }
-          
-          .notes {
-            background: #fff3cd;
-            border-left-color: #ffc107;
-          }
-          
-          .vehicle-info {
-            background: #e7f3ff;
-            border-left-color: #007bff;
-          }
-          
-          .controls {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-          }
-          
-          .btn {
-            padding: 12px 24px;
-            margin: 0 5px;
-            border: none;
-            border-radius: 5px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-          }
-          
-          .btn-primary {
-            background: #007bff;
-            color: white;
-          }
-          
-          .btn-primary:hover {
-            background: #0056b3;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0,123,255,0.3);
-          }
-          
-          .btn-secondary {
-            background: #6c757d;
-            color: white;
-          }
-          
-          .btn-secondary:hover {
-            background: #545b62;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(108,117,125,0.3);
-          }
-          
-          .footer {
-            margin-top: 40px;
-            text-align: center;
-            color: #6c757d;
-            font-size: 12px;
-            border-top: 1px solid #dee2e6;
-            padding-top: 20px;
-          }
-          
-          @media print {
-            body {
-              margin: 0;
-              padding: 20px;
-            }
-            
-            .controls {
-              display: none !important;
-            }
-            
-            .field {
-              break-inside: avoid;
-              page-break-inside: avoid;
-            }
-            
-            @page {
-              margin: 0.5in;
-              size: letter;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="controls">
-          <button class="btn btn-primary" onclick="window.print()">
-            🖨️ Print/Save PDF
-          </button>
-          <button class="btn btn-secondary" onclick="window.close()">
-            ✕ Close
-          </button>
-        </div>
+const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      margin: 40px;
+      color: #222;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid #003366;
+      padding-bottom: 15px;
+      margin-bottom: 25px;
+    }
+    .header .title {
+      font-size: 26px;
+      font-weight: bold;
+      color: #003366;
+    }
+    .header .subtitle {
+      font-size: 14px;
+      color: #555;
+    }
+    .section {
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: #444;
+      margin-bottom: 8px;
+      border-left: 4px solid #003366;
+      padding-left: 8px;
+    }
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 20px;
+      background: #f8f9fc;
+      padding: 12px 16px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+    .field {
+      font-size: 14px;
+    }
+    .field-label {
+      font-weight: bold;
+      color: #555;
+    }
+    .field-value {
+      margin-top: 2px;
+      font-size: 15px;
+      color: #111;
+    }
+    .highlight {
+      background: #fff9db;
+      border-left: 4px solid #e0a800;
+      padding: 10px 12px;
+      margin-top: 8px;
+      border-radius: 4px;
+    }
+    .footer {
+      margin-top: 40px;
+      font-size: 11px;
+      color: #666;
+      text-align: center;
+      border-top: 1px solid #ddd;
+      padding-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="title">Work Order #${getValue(workOrder.work_order_number)}</div>
+      <div class="subtitle">Police Department Fleet Management</div>
+    </div>
+  </div>
 
-        <div class="header">
-          <div class="title">Work Order #${getValue(workOrder.work_order_number)}</div>
-          <div class="subtitle">Police Department Fleet Management</div>
-        </div>
+  <div class="section">
+    <div class="section-title">Work Order Details</div>
+    <div class="field-grid">
+      <div class="field">
+        <div class="field-label">Work Order Number</div>
+        <div class="field-value">#${getValue(workOrder.work_order_number)}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Priority</div>
+        <div class="field-value">${getPriority()}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Status</div>
+        <div class="field-value">${getValue(workOrder.status, 'Open')}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Date Created</div>
+        <div class="field-value">${getDate(workOrder.created_at)}</div>
+      </div>
+    </div>
+  </div>
 
-        <div class="content">
-          <div class="field">
-            <div class="field-label">Work Order Number</div>
-            <div class="field-value">#${getValue(workOrder.work_order_number)}</div>
-          </div>
+  <div class="section">
+    <div class="section-title">Vehicle Information</div>
+    <div class="field-grid">
+      <div class="field">
+        <div class="field-label">Unit Number</div>
+        <div class="field-value">${unitNumber}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Year / Make / Model</div>
+        <div class="field-value">${vehicleYear} ${vehicleMake} ${vehicleModel}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Mileage</div>
+        <div class="field-value">${getMileage()}</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Location</div>
+        <div class="field-value">${getValue(workOrder.location)}</div>
+      </div>
+    </div>
+  </div>
 
-          <div class="field vehicle-info">
-            <div class="field-label">Vehicle Information</div>
-            <div class="field-value">
-              <strong>Unit #${unitNumber}</strong><br>
-              ${vehicleYear} ${vehicleMake} ${vehicleModel}
-            </div>
-          </div>
+  <div class="section">
+    <div class="section-title">Description of Issue</div>
+    <div class="highlight">
+      ${getValue(workOrder.description)}
+    </div>
+    ${getValue(workOrder.notes) !== 'Not specified' ? `
+      <div class="highlight" style="margin-top:10px;">
+        <strong>Additional Notes:</strong> ${getValue(workOrder.notes)}
+      </div>
+    ` : ''}
+  </div>
 
-          <div class="field">
-            <div class="field-label">Description of Issue</div>
-            <div class="field-value">${getValue(workOrder.description)}</div>
-          </div>
+  <div class="section">
+    <div class="section-title">Created By</div>
+    <div class="field-value">${createdByName} ${createdByBadge}</div>
+  </div>
 
-          ${getValue(workOrder.notes) !== 'Not specified' ? `
-          <div class="field notes">
-            <div class="field-label">Additional Notes</div>
-            <div class="field-value">${getValue(workOrder.notes)}</div>
-          </div>
-          ` : ''}
+  <div class="footer">
+    Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}<br>
+    Police Department Fleet Management System
+  </div>
+</body>
+</html>
+`;
 
-          <div class="field">
-            <div class="field-label">Priority</div>
-            <div class="field-value">${getPriority()}</div>
-          </div>
-
-          <div class="field">
-            <div class="field-label">Location</div>
-            <div class="field-value">${getValue(workOrder.location)}</div>
-          </div>
-
-          <div class="field">
-            <div class="field-label">Current Mileage</div>
-            <div class="field-value">${getMileage()}</div>
-          </div>
-
-          <div class="field">
-            <div class="field-label">Created By</div>
-            <div class="field-value">${createdByName} ${createdByBadge}</div>
-          </div>
-
-          <div class="field">
-            <div class="field-label">Date Created</div>
-            <div class="field-value">${getDate(workOrder.created_at)}</div>
-          </div>
-
-          <div class="field">
-            <div class="field-label">Status</div>
-            <div class="field-value">${getValue(workOrder.status, 'Open')}</div>
-          </div>
-        </div>
-
-        <div class="footer">
-          <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
-          <p>Police Department Fleet Management System</p>
-        </div>
-
-        <script>
-          // Auto-focus for better UX
-          window.focus();
-        </script>
-      </body>
-      </html>
-    `;
 
     // Open new window with the content
     const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
