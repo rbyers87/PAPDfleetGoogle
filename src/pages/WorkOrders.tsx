@@ -219,19 +219,31 @@ function WorkOrders() {
     return matchesStatus && matchesPriority && matchesSearch;
   });
 
-  const handleDownloadPDF = (workOrder: WorkOrder) => {
-    if (workOrder && workOrder.vehicle) {
-      generateWorkOrderPDF({
-        work_order_number: workOrder.work_order_number || 0,
-        unitNumber: workOrder.vehicle.unit_number,
-        description: workOrder.description,
-        priority: workOrder.priority,
-        location: workOrder.location,
-        mileage: 'N/A', // Mileage is not available in the work order object
-        created_at: workOrder.created_at,
-      });
+const handleDownloadPDF = async (workOrder: WorkOrder) => {
+  try {
+    // First, fetch the complete work order data with all fields
+    const { data: completeWorkOrder, error } = await supabase
+      .from('work_orders')
+      .select(`
+        *,
+        vehicle:vehicles(unit_number, make, model, year),
+        creator:profiles!work_orders_created_by_fkey(full_name, badge_number),
+        resolver:profiles!work_orders_resolved_by_fkey(full_name, badge_number)
+      `)
+      .eq('id', workOrder.id)
+      .single();
+
+    if (error) throw error;
+
+    if (completeWorkOrder) {
+      // Now generate PDF with complete data
+      await generateWorkOrderPDF(completeWorkOrder);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching complete work order:', error);
+    alert('Failed to generate PDF. Please try again.');
+  }
+};
 
   if (loading) {
     return (
