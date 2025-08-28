@@ -3,7 +3,7 @@
 
 export async function generateWorkOrderPDF(workOrder: any) {
 try {
-console.log(‘🆕 UPDATED PDF GENERATOR - Generating work order PDF for:’, workOrder.work_order_number);
+console.log(‘UPDATED PDF GENERATOR - Generating work order PDF for:’, workOrder.work_order_number);
 
 ```
 // Create HTML content for the work order
