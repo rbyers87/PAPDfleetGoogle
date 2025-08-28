@@ -1,10 +1,36 @@
 // src/utils/pdfGenerator.ts
-// COMPLETELY REPLACED - NO MORE PDFMAKE IMPORTS
-
 export async function generateWorkOrderPDF(workOrder: any) {
   try {
     console.log('🆕 UPDATED PDF GENERATOR - Generating work order PDF for:', workOrder.work_order_number);
-    
+    console.log('Work order data:', workOrder); // Debug log to see what data is received
+
+    // Helper function to safely get values
+    const getValue = (value: any, fallback: string = 'Not specified') => {
+      if (value === null || value === undefined || value === '') return fallback;
+      return value;
+    };
+
+    const getMileage = () => {
+      const mileage = workOrder.mileage || workOrder.mileage;
+      if (!mileage && mileage !== 0) return 'Not specified';
+      return `${mileage.toLocaleString()} miles`;
+    };
+
+    const getDate = (dateField: any) => {
+      if (!dateField) return 'Not specified';
+      try {
+        return new Date(dateField).toLocaleString();
+      } catch {
+        return 'Invalid date';
+      }
+    };
+
+    const getPriority = () => {
+      const priority = workOrder.priority || workOrder.priority;
+      if (!priority) return 'Not specified';
+      return priority.charAt(0).toUpperCase() + priority.slice(1);
+    };
+
     // Create HTML content for the work order
     const htmlContent = `
       <!DOCTYPE html>
@@ -12,7 +38,7 @@ export async function generateWorkOrderPDF(workOrder: any) {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Work Order ${workOrder.work_order_number}</title>
+        <title>Work Order ${getValue(workOrder.work_order_number)}</title>
         <style>
           * {
             margin: 0;
@@ -74,6 +100,11 @@ export async function generateWorkOrderPDF(workOrder: any) {
             font-size: 16px;
             color: #212529;
             word-wrap: break-word;
+          }
+          
+          .notes {
+            background: #fff3cd;
+            border-left-color: #ffc107;
           }
           
           .controls {
@@ -158,66 +189,66 @@ export async function generateWorkOrderPDF(workOrder: any) {
         </div>
 
         <div class="header">
-          <div class="title">Work Order #${workOrder.work_order_number}</div>
+          <div class="title">Work Order #${getValue(workOrder.work_order_number)}</div>
           <div class="subtitle">Police Department Fleet Management</div>
         </div>
 
         <div class="content">
           <div class="field">
             <div class="field-label">Work Order Number</div>
-            <div class="field-value">#${workOrder.work_order_number || 'Not assigned'}</div>
+            <div class="field-value">#${getValue(workOrder.work_order_number)}</div>
           </div>
 
           <div class="field">
             <div class="field-label">Unit Number</div>
-            <div class="field-value">${workOrder.unit_number || workOrder.unitNumber || 'Not specified'}</div>
+            <div class="field-value">${getValue(workOrder.unit_number || workOrder.unitNumber)}</div>
           </div>
 
           <div class="field">
             <div class="field-label">Description of Issue</div>
-            <div class="field-value">${workOrder.description || workOrder.issue || 'Not specified'}</div>
+            <div class="field-value">${getValue(workOrder.description || workOrder.issue)}</div>
           </div>
 
-          ${workOrder.notes ? `
-          <div class="field">
+          ${getValue(workOrder.notes) !== 'Not specified' ? `
+          <div class="field notes">
             <div class="field-label">Additional Notes</div>
-            <div class="field-value">${workOrder.notes}</div>
+            <div class="field-value">${getValue(workOrder.notes)}</div>
           </div>
           ` : ''}
 
           <div class="field">
             <div class="field-label">Priority</div>
-            <div class="field-value">${workOrder.priority ? workOrder.priority.charAt(0).toUpperCase() + workOrder.priority.slice(1) : 'Not specified'}</div>
+            <div class="field-value">${getPriority()}</div>
           </div>
 
           <div class="field">
             <div class="field-label">Location</div>
-            <div class="field-value">${workOrder.location || workOrder.currentLocation || 'Not specified'}</div>
+            <div class="field-value">${getValue(workOrder.location || workOrder.currentLocation)}</div>
           </div>
 
           <div class="field">
             <div class="field-label">Current Mileage</div>
-            <div class="field-value">${workOrder.mileage ? workOrder.mileage.toLocaleString() + ' miles' : 'Not specified'}</div>
+            <div class="field-value">${getMileage()}</div>
           </div>
 
           <div class="field">
             <div class="field-label">Vehicle ID</div>
-            <div class="field-value">${workOrder.vehicle_id || workOrder.vehicleId || 'Not specified'}</div>
+            <div class="field-value">${getValue(workOrder.vehicle_id || workOrder.vehicleId)}</div>
           </div>
 
           <div class="field">
             <div class="field-label">Created By</div>
-            <div class="field-value">${workOrder.created_by || workOrder.reportedBy || 'Not specified'}</div>
+            <div class="field-value">${getValue(workOrder.created_by || workOrder.reportedBy)}</div>
           </div>
 
           <div class="field">
             <div class="field-label">Date Created</div>
-            <div class="field-value">${workOrder.created_at ? new Date(workOrder.created_at).toLocaleString() : workOrder.createdAt || 'Not specified'}</div>
+            <div class="field-value">${getDate(workOrder.created_at || workOrder.createdAt)}</div>
           </div>
 
           <div class="field">
             <div class="field-label">Status</div>
-            <div class="field-value">${workOrder.status || 'Open'}</div>
+            <div class="field-value">${getValue(workOrder.status, 'Open')}</div>
           </div>
         </div>
 
@@ -230,8 +261,8 @@ export async function generateWorkOrderPDF(workOrder: any) {
           // Auto-focus for better UX
           window.focus();
           
-          // Optional: Auto-print after a short delay
-          // setTimeout(() => window.print(), 500);
+          // Debug: Log the work order data to console
+          console.log('Work Order Data:', ${JSON.stringify(workOrder)});
         </script>
       </body>
       </html>
