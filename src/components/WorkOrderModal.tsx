@@ -12,12 +12,13 @@ interface WorkOrderModalProps {
 }
 
 function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocation }: WorkOrderModalProps) {
-  const { session } = useAuthStore();
+  const { session, user } = useAuthStore();
   const [formData, setFormData] = useState({
     description: '',
     priority: 'normal',
     location: currentLocation,
     mileage: '',
+    notes: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +29,7 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
     setError(null);
 
     try {
-      if (!session?.user?.id) {
+      if (!session?.user?.id || !user) {
         setError('User not authenticated.');
         return;
       }
@@ -49,12 +50,14 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
         .from('work_orders')
         .insert([{
           vehicle_id: vehicleId,
+          unit_number: unitNumber,
           description: formData.description,
           priority: formData.priority,
           location: formData.location,
-          created_by: session.user.id,
-          mileage: formData.mileage,
-          work_order_number: newWorkOrderNumber, // Assign the new work order number
+          created_by: user.name || session.user.email,
+          mileage: parseInt(formData.mileage) || 0,
+          work_order_number: newWorkOrderNumber,
+          notes: formData.notes,
         }]);
 
       if (error) throw error;
@@ -99,9 +102,22 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
               required
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={4}
+              rows={3}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Describe the issue that needs attention..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Additional Notes
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              rows={2}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Any additional information or comments..."
             />
           </div>
 
