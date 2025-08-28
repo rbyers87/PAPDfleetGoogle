@@ -2,7 +2,6 @@
 export async function generateWorkOrderPDF(workOrder: any) {
   try {
     console.log('🆕 Generating work order PDF for:', workOrder.work_order_number);
-    console.log('Complete work order data:', workOrder); // Debug log
 
     // Helper function to safely get values
     const getValue = (value: any, fallback: string = 'Not specified') => {
@@ -38,6 +37,9 @@ export async function generateWorkOrderPDF(workOrder: any) {
     const vehicleYear = workOrder.vehicle?.year || 'Not specified';
     const createdByName = workOrder.creator?.full_name || workOrder.created_by || 'Not specified';
     const createdByBadge = workOrder.creator?.badge_number ? `(Badge #${workOrder.creator.badge_number})` : '';
+
+    // Base64-encoded department logo
+    const departmentLogo = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALsAAADPCAYAAACtI6C9AAAAAXNSR0IArs4c6QAAAAlwSFlzAAAOxAAADsQBlSsOGwAAABl0RVh0Q29tbWVudABDcmVhdGVkIHdpdGggR0lNUFeBDhcAAAGMSURBVHja7dSxDcIwDEXROwEZRYQ4EMjhEtOMzCKVeE42dE2KH9sN6g7mnPfOBhmZmZmZmZma+ahYzSnylPXsUpgAMJ4FwgNMF1gAk4kA6YgG4A5HIAB5mAHABhkgJ4Q3BNiPjhVQwW2oYRmJrArIAf0YCBYgKoe7SkCyHbc6BCMYETKAE9zCMfFQIdt6fMg3QBlLrWcAPYDkZLqCKJ5Ug7DXtwHIUahgNMhmVJS1oAJINhKXtAAkQ2lSENhAC8zdDwpkVb7fxFbOHr3hCSDYZhTBvJOIkBwTFDw1tYc6oZ0qE5YA5GBcvOCgCc94Lplkz6gK1k86iEsAzOCJpmNUHEuoe41fWkBPWWpWTZ6AczA5RxJpgAxw4uDPGRgeYuX5OgDgxj+LA++x8A9hxgLRgVAEvMH+AEnw0aQOQWTQAAAABJRU5ErkJggg==";
 
     // Create HTML content for the work order
     const htmlContent = `
@@ -137,7 +139,7 @@ export async function generateWorkOrderPDF(workOrder: any) {
       <body>
         <div class="header">
           <div class="logo">
-            <img src="/assets/icon.png" alt="Department Logo" />
+            <img src="${departmentLogo}" alt="Department Logo" />
           </div>
           <div class="header-text">
             <div class="title">Work Order #${getValue(workOrder.work_order_number)}</div>
@@ -221,24 +223,18 @@ export async function generateWorkOrderPDF(workOrder: any) {
       throw new Error('Unable to open print window. Please allow popups for this site.');
     }
 
-    // Write the HTML content
     printWindow.document.open();
     printWindow.document.write(htmlContent);
     printWindow.document.close();
-
-    // Focus the new window
     printWindow.focus();
 
     console.log('Work order PDF window opened successfully');
-    
     return true;
 
   } catch (error) {
     console.error('Error generating work order PDF:', error);
-    
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     alert(`Failed to generate PDF: ${errorMessage}\n\nPlease try again or contact support if the issue persists.`);
-    
     return false;
   }
 }
