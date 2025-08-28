@@ -165,27 +165,62 @@ export async function generateWorkOrderPDF(workOrder: any) {
         <div class="content">
           <div class="field">
             <div class="field-label">Unit Number</div>
-            <div class="field-value">${workOrder.unitNumber || 'Not specified'}</div>
+            <div class="field-value">${workOrder.unitNumber || workOrder.unit_number || 'Not specified'}</div>
           </div>
 
           <div class="field">
-            <div class="field-label">Issue Description</div>
-            <div class="field-value">${workOrder.issue || 'Not specified'}</div>
+            <div class="field-label">Make</div>
+            <div class="field-value">${workOrder.make || 'Not specified'}</div>
           </div>
 
           <div class="field">
-            <div class="field-label">Additional Notes</div>
+            <div class="field-label">Model</div>
+            <div class="field-value">${workOrder.model || 'Not specified'}</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Year</div>
+            <div class="field-value">${workOrder.year || 'Not specified'}</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Status</div>
+            <div class="field-value">${workOrder.status || 'Not specified'}</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Current Location</div>
+            <div class="field-value">${workOrder.currentLocation || workOrder.current_location || workOrder.location || 'Not specified'}</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Current Mileage</div>
+            <div class="field-value">${workOrder.currentMileage || workOrder.current_mileage || workOrder.mileage || 'Not specified'}</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Priority</div>
+            <div class="field-value">${workOrder.priority || 'Not specified'}</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Description of Issue</div>
+            <div class="field-value">${workOrder.issue || workOrder.description || workOrder.issueDescription || 'Not specified'}</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">Notes</div>
             <div class="field-value">${workOrder.notes || 'No additional notes'}</div>
           </div>
 
           <div class="field">
             <div class="field-label">Reported By</div>
-            <div class="field-value">${workOrder.reportedBy || 'Not specified'}</div>
+            <div class="field-value">${workOrder.reportedBy || workOrder.reported_by || 'Not specified'}</div>
           </div>
 
           <div class="field">
             <div class="field-label">Date Created</div>
-            <div class="field-value">${workOrder.createdAt || 'Not specified'}</div>
+            <div class="field-value">${workOrder.createdAt || workOrder.created_at || workOrder.dateCreated || 'Not specified'}</div>
           </div>
         </div>
 
