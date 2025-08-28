@@ -21,6 +21,8 @@ interface WorkOrder {
   description: string;
   priority: 'low' | 'normal' | 'high' | 'urgent';
   location: string;
+  mileage: number | null; // Add this
+  notes: string | null; // Add this
   resolved_at: string | null;
   resolved_by: string | null;
   resolution_notes: string | null;
