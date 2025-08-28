@@ -55,10 +55,10 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
           priority: formData.priority,
           location: formData.location,
           created_by: user.name || session.user.email,
-          mileage: parseInt(formData.mileage) || 0,
+          mileage: parseInt(formData.mileage) || 0, // Ensure this is a number
           work_order_number: newWorkOrderNumber,
           notes: formData.notes,
-        }]);
+  }]);
 
       if (error) throw error;
       onClose();
