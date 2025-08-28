@@ -1,8 +1,8 @@
 // src/utils/pdfGenerator.ts
 export async function generateWorkOrderPDF(workOrder: any) {
   try {
-    console.log('🆕 UPDATED PDF GENERATOR - Generating work order PDF for:', workOrder.work_order_number);
-    console.log('Work order data:', workOrder); // Debug log to see what data is received
+    console.log('🆕 Generating work order PDF for:', workOrder.work_order_number);
+    console.log('Complete work order data:', workOrder); // Debug log
 
     // Helper function to safely get values
     const getValue = (value: any, fallback: string = 'Not specified') => {
@@ -11,7 +11,7 @@ export async function generateWorkOrderPDF(workOrder: any) {
     };
 
     const getMileage = () => {
-      const mileage = workOrder.mileage || workOrder.mileage;
+      const mileage = workOrder.mileage;
       if (!mileage && mileage !== 0) return 'Not specified';
       return `${mileage.toLocaleString()} miles`;
     };
@@ -26,10 +26,18 @@ export async function generateWorkOrderPDF(workOrder: any) {
     };
 
     const getPriority = () => {
-      const priority = workOrder.priority || workOrder.priority;
+      const priority = workOrder.priority;
       if (!priority) return 'Not specified';
       return priority.charAt(0).toUpperCase() + priority.slice(1);
     };
+
+    // Extract nested data
+    const unitNumber = workOrder.vehicle?.unit_number || workOrder.unit_number || 'Not specified';
+    const vehicleMake = workOrder.vehicle?.make || 'Not specified';
+    const vehicleModel = workOrder.vehicle?.model || 'Not specified';
+    const vehicleYear = workOrder.vehicle?.year || 'Not specified';
+    const createdByName = workOrder.creator?.full_name || workOrder.created_by || 'Not specified';
+    const createdByBadge = workOrder.creator?.badge_number ? `(Badge #${workOrder.creator.badge_number})` : '';
 
     // Create HTML content for the work order
     const htmlContent = `
@@ -105,6 +113,11 @@ export async function generateWorkOrderPDF(workOrder: any) {
           .notes {
             background: #fff3cd;
             border-left-color: #ffc107;
+          }
+          
+          .vehicle-info {
+            background: #e7f3ff;
+            border-left-color: #007bff;
           }
           
           .controls {
@@ -199,14 +212,17 @@ export async function generateWorkOrderPDF(workOrder: any) {
             <div class="field-value">#${getValue(workOrder.work_order_number)}</div>
           </div>
 
-          <div class="field">
-            <div class="field-label">Unit Number</div>
-            <div class="field-value">${getValue(workOrder.unit_number || workOrder.unitNumber)}</div>
+          <div class="field vehicle-info">
+            <div class="field-label">Vehicle Information</div>
+            <div class="field-value">
+              <strong>Unit #${unitNumber}</strong><br>
+              ${vehicleYear} ${vehicleMake} ${vehicleModel}
+            </div>
           </div>
 
           <div class="field">
             <div class="field-label">Description of Issue</div>
-            <div class="field-value">${getValue(workOrder.description || workOrder.issue)}</div>
+            <div class="field-value">${getValue(workOrder.description)}</div>
           </div>
 
           ${getValue(workOrder.notes) !== 'Not specified' ? `
@@ -223,7 +239,7 @@ export async function generateWorkOrderPDF(workOrder: any) {
 
           <div class="field">
             <div class="field-label">Location</div>
-            <div class="field-value">${getValue(workOrder.location || workOrder.currentLocation)}</div>
+            <div class="field-value">${getValue(workOrder.location)}</div>
           </div>
 
           <div class="field">
@@ -232,18 +248,13 @@ export async function generateWorkOrderPDF(workOrder: any) {
           </div>
 
           <div class="field">
-            <div class="field-label">Vehicle ID</div>
-            <div class="field-value">${getValue(workOrder.vehicle_id || workOrder.vehicleId)}</div>
-          </div>
-
-          <div class="field">
             <div class="field-label">Created By</div>
-            <div class="field-value">${getValue(workOrder.created_by || workOrder.reportedBy)}</div>
+            <div class="field-value">${createdByName} ${createdByBadge}</div>
           </div>
 
           <div class="field">
             <div class="field-label">Date Created</div>
-            <div class="field-value">${getDate(workOrder.created_at || workOrder.createdAt)}</div>
+            <div class="field-value">${getDate(workOrder.created_at)}</div>
           </div>
 
           <div class="field">
@@ -260,9 +271,6 @@ export async function generateWorkOrderPDF(workOrder: any) {
         <script>
           // Auto-focus for better UX
           window.focus();
-          
-          // Debug: Log the work order data to console
-          console.log('Work Order Data:', ${JSON.stringify(workOrder)});
         </script>
       </body>
       </html>
