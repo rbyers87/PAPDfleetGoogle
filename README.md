@@ -34,3 +34,6 @@ need to build selection choices for repairs
 need to add ability to make work order without putting out of service.
 
 take away free form box and make it selection for unit location
+
+
+test from terminal
