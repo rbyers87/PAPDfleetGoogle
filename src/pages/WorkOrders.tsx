@@ -61,7 +61,7 @@ function WorkOrders() {
     fetchWorkOrders();
   }, []);
 
-  async function fetchWorkOrders() {
+   async function fetchWorkOrders() {
     try {
       const { data, error } = await supabase
         .from('work_orders')
@@ -80,8 +80,8 @@ function WorkOrders() {
       console.error('Error:', err);
     } finally {
       setLoading(false);
-    }
   }
+}
 
   const handleUpdateStatus = async (newStatus: 'in_progress' | 'completed' | 'cancelled') => {
     if (!selectedWorkOrder) return;
