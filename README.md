@@ -36,4 +36,4 @@ need to add ability to make work order without putting out of service.
 take away free form box and make it selection for unit location
 
 
-test from terminal
+if github page not refreshing, delete the gh-page branch and redeploy with terminal npm run deploy
