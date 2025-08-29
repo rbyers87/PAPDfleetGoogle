@@ -105,7 +105,7 @@ export async function generateWorkOrderPDF(workOrder: any) {
             margin-bottom: 25px;
           }
           .logo img {
-            height: 60px;
+            height: 80px;
           }
           .header-text {
             text-align: right;
