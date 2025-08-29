@@ -330,7 +330,7 @@ Option 2: Install and provide the "ws" package:
             margin-bottom: 25px;
           }
           .logo img {
-            height: 100px;
+            height: 150px;
           }
           .header-text {
             text-align: right;
