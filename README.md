@@ -37,3 +37,9 @@ take away free form box and make it selection for unit location
 
 
 if github page not refreshing, delete the gh-page branch and redeploy with terminal npm run deploy
+
+Clean your build cache:
+
+# Remove the dist folder and rebuild
+rm -rf dist
+npm run build
