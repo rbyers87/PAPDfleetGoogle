@@ -28,21 +28,32 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
     setLoading(true);
     setError(null);
 
+    // Debug logging BEFORE try block
+    console.log('=== DEBUGGING AUTH STATE ===');
+    console.log('Session from store:', session);
+    console.log('User from store:', user);
+    console.log('Session user ID from store:', session?.user?.id);
+
     try {
       // Get current session from Supabase directly
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
       
-      // Debug logging
-      console.log('Session from store:', session);
       console.log('Session from Supabase:', currentSession);
-      console.log('User from store:', user);
+      console.log('Session error:', sessionError);
+      console.log('Supabase session user ID:', currentSession?.user?.id);
 
       // Check authentication using either source
       const activeSession = currentSession || session;
+      console.log('Active session:', activeSession);
+      console.log('Active session user ID:', activeSession?.user?.id);
+
       if (!activeSession?.user?.id) {
+        console.log('AUTHENTICATION FAILED - No valid session found');
         setError('User not authenticated.');
         return;
       }
+
+      console.log('AUTHENTICATION SUCCESS - Proceeding with work order creation');
 
       // Fetch the last work order number and increment it
       const { data: lastWorkOrder, error: lastWorkOrderError } = await supabase
