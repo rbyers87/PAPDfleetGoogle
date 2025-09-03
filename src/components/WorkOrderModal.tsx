@@ -29,7 +29,17 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
     setError(null);
 
     try {
-      if (!session?.user?.id || !user) {
+      // Get current session from Supabase directly
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      // Debug logging
+      console.log('Session from store:', session);
+      console.log('Session from Supabase:', currentSession);
+      console.log('User from store:', user);
+
+      // Check authentication using either source
+      const activeSession = currentSession || session;
+      if (!activeSession?.user?.id) {
         setError('User not authenticated.');
         return;
       }
@@ -46,6 +56,9 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
       const lastWorkOrderNumber = lastWorkOrder && lastWorkOrder.length > 0 ? lastWorkOrder[0].work_order_number : 0;
       const newWorkOrderNumber = lastWorkOrderNumber + 1;
 
+      // Use active session for created_by field
+      const createdBy = user?.name || activeSession.user.email || 'Unknown User';
+
       const { error } = await supabase
         .from('work_orders')
         .insert([{
@@ -54,11 +67,11 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
           description: formData.description,
           priority: formData.priority,
           location: formData.location,
-          created_by: user.name || session.user.email,
+          created_by: createdBy,
           mileage: parseInt(formData.mileage) || 0, // Ensure this is a number
           work_order_number: newWorkOrderNumber,
           notes: formData.notes,
-  }]);
+        }]);
 
       if (error) throw error;
       onClose();
