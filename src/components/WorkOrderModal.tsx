@@ -67,7 +67,7 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
       const lastWorkOrderNumber = lastWorkOrder && lastWorkOrder.length > 0 ? lastWorkOrder[0].work_order_number : 0;
       const newWorkOrderNumber = lastWorkOrderNumber + 1;
 
-      // Use active session for created_by field
+      // Use active session for created_by field - back to original format
       const createdBy = user?.name || activeSession.user.email || 'Unknown User';
 
       const { error } = await supabase
