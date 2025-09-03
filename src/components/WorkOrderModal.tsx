@@ -54,6 +54,17 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
       }
 
       console.log('AUTHENTICATION SUCCESS - Proceeding with work order creation');
+      console.log('About to insert data:', {
+        vehicle_id: vehicleId,
+        unit_number: unitNumber,
+        description: formData.description,
+        priority: formData.priority,
+        location: formData.location,
+        created_by: createdBy,
+        mileage: parseInt(formData.mileage) || 0,
+        work_order_number: newWorkOrderNumber,
+        notes: formData.notes,
+      });
 
       // Fetch the last work order number and increment it
       const { data: lastWorkOrder, error: lastWorkOrderError } = await supabase
@@ -67,8 +78,8 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
       const lastWorkOrderNumber = lastWorkOrder && lastWorkOrder.length > 0 ? lastWorkOrder[0].work_order_number : 0;
       const newWorkOrderNumber = lastWorkOrderNumber + 1;
 
-      // Use active session for created_by field - back to original format
-      const createdBy = user?.name || activeSession.user.email || 'Unknown User';
+      // Use the actual UUID for created_by (not email/name)
+      const createdBy = activeSession.user.id; // This is the UUID from auth.users
 
       const { error } = await supabase
         .from('work_orders')
