@@ -28,43 +28,11 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
     setLoading(true);
     setError(null);
 
-    // Debug logging BEFORE try block
-    console.log('=== DEBUGGING AUTH STATE ===');
-    console.log('Session from store:', session);
-    console.log('User from store:', user);
-    console.log('Session user ID from store:', session?.user?.id);
-
     try {
-      // Get current session from Supabase directly
-      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
-      
-      console.log('Session from Supabase:', currentSession);
-      console.log('Session error:', sessionError);
-      console.log('Supabase session user ID:', currentSession?.user?.id);
-
-      // Check authentication using either source
-      const activeSession = currentSession || session;
-      console.log('Active session:', activeSession);
-      console.log('Active session user ID:', activeSession?.user?.id);
-
-      if (!activeSession?.user?.id) {
-        console.log('AUTHENTICATION FAILED - No valid session found');
+      if (!session?.user?.id || !user) {
         setError('User not authenticated.');
         return;
       }
-
-      console.log('AUTHENTICATION SUCCESS - Proceeding with work order creation');
-      console.log('About to insert data:', {
-        vehicle_id: vehicleId,
-        unit_number: unitNumber,
-        description: formData.description,
-        priority: formData.priority,
-        location: formData.location,
-        created_by: createdBy,
-        mileage: parseInt(formData.mileage) || 0,
-        work_order_number: newWorkOrderNumber,
-        notes: formData.notes,
-      });
 
       // Fetch the last work order number and increment it
       const { data: lastWorkOrder, error: lastWorkOrderError } = await supabase
@@ -78,9 +46,6 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
       const lastWorkOrderNumber = lastWorkOrder && lastWorkOrder.length > 0 ? lastWorkOrder[0].work_order_number : 0;
       const newWorkOrderNumber = lastWorkOrderNumber + 1;
 
-      // Use the actual UUID for created_by (not email/name)
-      const createdBy = activeSession.user.id; // This is the UUID from auth.users
-
       const { error } = await supabase
         .from('work_orders')
         .insert([{
@@ -89,11 +54,11 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
           description: formData.description,
           priority: formData.priority,
           location: formData.location,
-          created_by: createdBy,
+          created_by: user.name || session.user.email,
           mileage: parseInt(formData.mileage) || 0, // Ensure this is a number
           work_order_number: newWorkOrderNumber,
           notes: formData.notes,
-        }]);
+  }]);
 
       if (error) throw error;
       onClose();
