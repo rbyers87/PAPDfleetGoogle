@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
@@ -9,6 +9,12 @@ interface WorkOrderModalProps {
   vehicleId: string;
   unitNumber: string;
   currentLocation: string;
+}
+
+interface LocationOption {
+  id: string;
+  name: string;
+  is_active: boolean;
 }
 
 function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocation }: WorkOrderModalProps) {
@@ -22,6 +28,53 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [locationOptions, setLocationOptions] = useState<LocationOption[]>([]);
+  const [useLocationDropdown, setUseLocationDropdown] = useState(true);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchLocationSettings();
+      fetchLocationOptions();
+    }
+  }, [isOpen]);
+
+  const fetchLocationSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('work_order_settings')
+        .select('use_location_dropdown')
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching settings:', error);
+        return;
+      }
+
+      if (data) {
+        setUseLocationDropdown(data.use_location_dropdown ?? true);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+    }
+  };
+
+  const fetchLocationOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('location_options')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+
+      setLocationOptions(data || []);
+    } catch (err) {
+      console.error('Error fetching location options:', err);
+      setLocationOptions([]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +82,6 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
     setError(null);
 
     try {
-      // Only check for session - remove the user check since it's undefined
       if (!session?.user?.id) {
         setError('User not authenticated.');
         return;
@@ -47,7 +99,6 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
       const lastWorkOrderNumber = lastWorkOrder && lastWorkOrder.length > 0 ? lastWorkOrder[0].work_order_number : 0;
       const newWorkOrderNumber = lastWorkOrderNumber + 1;
 
-      // Fix the created_by field - use the user UUID, not email/name
       const { error } = await supabase
         .from('work_orders')
         .insert([{
@@ -56,13 +107,23 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
           description: formData.description,
           priority: formData.priority,
           location: formData.location,
-          created_by: session.user.id, // Use the UUID from session
+          created_by: session.user.id,
           mileage: parseInt(formData.mileage) || 0,
           work_order_number: newWorkOrderNumber,
           notes: formData.notes,
         }]);
 
       if (error) throw error;
+      
+      // Reset form
+      setFormData({
+        description: '',
+        priority: 'normal',
+        location: currentLocation,
+        mileage: '',
+        notes: '',
+      });
+      
       onClose();
     } catch (err) {
       setError('Failed to create work order. Please try again.');
@@ -143,14 +204,30 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Location
             </label>
-            <input
-              type="text"
-              required
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Where is the vehicle located?"
-            />
+            {useLocationDropdown && locationOptions.length > 0 ? (
+              <select
+                required
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select a location...</option>
+                {locationOptions.map((location) => (
+                  <option key={location.id} value={location.name}>
+                    {location.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                required
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Where is the vehicle located?"
+              />
+            )}
           </div>
 
           <div>
