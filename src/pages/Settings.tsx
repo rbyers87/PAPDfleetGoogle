@@ -12,7 +12,9 @@ import {
   Trash2,
   Save,
   X,
-  ClipboardList
+  ClipboardList,
+  MapPin,
+  GripVertical
 } from 'lucide-react';
 
 interface Profile {
@@ -39,6 +41,14 @@ interface WorkOrderSettings {
   require_location: boolean;
   auto_assign_numbers: boolean;
   notification_enabled: boolean;
+  use_location_dropdown: boolean;
+}
+
+interface LocationOption {
+  id: string;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
 }
 
 function Settings() {
@@ -52,15 +62,19 @@ function Settings() {
     require_mileage: true,
     require_location: true,
     auto_assign_numbers: true,
-    notification_enabled: true
+    notification_enabled: true,
+    use_location_dropdown: true
   });
+  const [locationOptions, setLocationOptions] = useState<LocationOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [editingLocation, setEditingLocation] = useState<LocationOption | null>(null);
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [showNewVehicleForm, setShowNewVehicleForm] = useState(false);
+  const [showNewLocationForm, setShowNewLocationForm] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
     vehicleId: string;
@@ -87,6 +101,10 @@ function Settings() {
     model_year: new Date().getFullYear()
   });
 
+  const [newLocation, setNewLocation] = useState({
+    name: ''
+  });
+
   useEffect(() => {
     if (!isAdmin) {
       navigate('/dashboard');
@@ -99,6 +117,7 @@ function Settings() {
       fetchVehicles();
     } else if (activeTab === 'workorders') {
       fetchWorkOrderSettings();
+      fetchLocationOptions();
     }
   }, [activeTab, isAdmin, navigate]);
 
@@ -131,7 +150,7 @@ function Settings() {
       const { data, error } = await supabase
         .from('vehicles')
         .select('*')
-        .eq('is_archived', false) // Only fetch non-archived vehicles
+        .eq('is_archived', false)
         .order('unit_number');
 
       if (error) throw error;
@@ -167,6 +186,21 @@ function Settings() {
     }
   }
 
+  async function fetchLocationOptions() {
+    try {
+      const { data, error } = await supabase
+        .from('location_options')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      setLocationOptions(data || []);
+    } catch (err) {
+      setError('Failed to fetch location options');
+      console.error('Error:', err);
+    }
+  }
+
   async function handleSaveWorkOrderSettings() {
     try {
       setError(null);
@@ -198,6 +232,70 @@ function Settings() {
       console.error('Error:', err);
     }
   }
+
+  async function handleCreateLocation(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    try {
+      // Get the next sort order
+      const maxSortOrder = Math.max(...locationOptions.map(l => l.sort_order), 0);
+
+      const { error } = await supabase
+        .from('location_options')
+        .insert([{
+          name: newLocation.name,
+          sort_order: maxSortOrder + 1,
+          is_active: true
+        }]);
+
+      if (error) throw error;
+
+      setShowNewLocationForm(false);
+      setNewLocation({ name: '' });
+      fetchLocationOptions();
+    } catch (err) {
+      setError('Failed to create location');
+      console.error('Error:', err);
+    }
+  }
+
+  async function handleUpdateLocation(location: LocationOption) {
+    try {
+      const { error } = await supabase
+        .from('location_options')
+        .update({
+          name: location.name,
+          is_active: location.is_active
+        })
+        .eq('id', location.id);
+
+      if (error) throw error;
+
+      setEditingLocation(null);
+      fetchLocationOptions();
+    } catch (err) {
+      setError('Failed to update location');
+      console.error('Error:', err);
+    }
+  }
+
+  async function handleDeleteLocation(locationId: string) {
+    try {
+      const { error } = await supabase
+        .from('location_options')
+        .delete()
+        .eq('id', locationId);
+
+      if (error) throw error;
+      fetchLocationOptions();
+    } catch (err) {
+      setError('Failed to delete location');
+      console.error('Error:', err);
+    }
+  }
+
+  // ... (keeping all the existing user and vehicle functions exactly as they were)
 
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
@@ -323,7 +421,6 @@ function Settings() {
       
       const { session } = useAuthStore.getState();
       
-      // Archive the vehicle instead of deleting
       const { error } = await supabase
         .from('vehicles')
         .update({
@@ -453,114 +550,251 @@ function Settings() {
 
       {/* Work Orders Settings Tab */}
       {activeTab === 'workorders' && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Work Order Template Settings</h3>
-            <p className="mt-1 text-sm text-gray-600">
-              Configure default settings and requirements for work orders.
-            </p>
+        <div className="space-y-6">
+          {/* Main Settings */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Work Order Template Settings</h3>
+              <p className="mt-1 text-sm text-gray-600">
+                Configure default settings and requirements for work orders.
+              </p>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Default Priority Level
+                </label>
+                <select
+                  value={workOrderSettings.default_priority}
+                  onChange={(e) => setWorkOrderSettings({
+                    ...workOrderSettings,
+                    default_priority: e.target.value as 'low' | 'normal' | 'high' | 'urgent'
+                  })}
+                  className="w-full max-w-xs px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-base font-medium text-gray-900">Required Fields</h4>
+                
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="require_mileage"
+                    checked={workOrderSettings.require_mileage}
+                    onChange={(e) => setWorkOrderSettings({
+                      ...workOrderSettings,
+                      require_mileage: e.target.checked
+                    })}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="require_mileage" className="ml-2 block text-sm text-gray-900">
+                    Require current mileage
+                  </label>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="require_location"
+                    checked={workOrderSettings.require_location}
+                    onChange={(e) => setWorkOrderSettings({
+                      ...workOrderSettings,
+                      require_location: e.target.checked
+                    })}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="require_location" className="ml-2 block text-sm text-gray-900">
+                    Require vehicle location
+                  </label>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="use_location_dropdown"
+                    checked={workOrderSettings.use_location_dropdown}
+                    onChange={(e) => setWorkOrderSettings({
+                      ...workOrderSettings,
+                      use_location_dropdown: e.target.checked
+                    })}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="use_location_dropdown" className="ml-2 block text-sm text-gray-900">
+                    Use dropdown for location selection
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-base font-medium text-gray-900">System Settings</h4>
+                
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="auto_assign_numbers"
+                    checked={workOrderSettings.auto_assign_numbers}
+                    onChange={(e) => setWorkOrderSettings({
+                      ...workOrderSettings,
+                      auto_assign_numbers: e.target.checked
+                    })}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="auto_assign_numbers" className="ml-2 block text-sm text-gray-900">
+                    Automatically assign work order numbers
+                  </label>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="notification_enabled"
+                    checked={workOrderSettings.notification_enabled}
+                    onChange={(e) => setWorkOrderSettings({
+                      ...workOrderSettings,
+                      notification_enabled: e.target.checked
+                    })}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="notification_enabled" className="ml-2 block text-sm text-gray-900">
+                    Enable email notifications for work order updates
+                  </label>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-200">
+                <button
+                  onClick={handleSaveWorkOrderSettings}
+                  className="flex items-center px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Settings
+                </button>
+              </div>
+            </div>
           </div>
-          
-          <div className="p-6 space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Default Priority Level
-              </label>
-              <select
-                value={workOrderSettings.default_priority}
-                onChange={(e) => setWorkOrderSettings({
-                  ...workOrderSettings,
-                  default_priority: e.target.value as 'low' | 'normal' | 'high' | 'urgent'
-                })}
-                className="w-full max-w-xs px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="low">Low</option>
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </div>
 
-            <div className="space-y-4">
-              <h4 className="text-base font-medium text-gray-900">Required Fields</h4>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="require_mileage"
-                  checked={workOrderSettings.require_mileage}
-                  onChange={(e) => setWorkOrderSettings({
-                    ...workOrderSettings,
-                    require_mileage: e.target.checked
-                  })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="require_mileage" className="ml-2 block text-sm text-gray-900">
-                  Require current mileage
-                </label>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="require_location"
-                  checked={workOrderSettings.require_location}
-                  onChange={(e) => setWorkOrderSettings({
-                    ...workOrderSettings,
-                    require_location: e.target.checked
-                  })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="require_location" className="ml-2 block text-sm text-gray-900">
-                  Require vehicle location
-                </label>
+          {/* Location Management */}
+          <div className="bg-white shadow rounded-lg">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Location Options</h3>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Manage predefined locations for work orders.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowNewLocationForm(true)}
+                  className="flex items-center px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Location
+                </button>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h4 className="text-base font-medium text-gray-900">System Settings</h4>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="auto_assign_numbers"
-                  checked={workOrderSettings.auto_assign_numbers}
-                  onChange={(e) => setWorkOrderSettings({
-                    ...workOrderSettings,
-                    auto_assign_numbers: e.target.checked
-                  })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="auto_assign_numbers" className="ml-2 block text-sm text-gray-900">
-                  Automatically assign work order numbers
-                </label>
-              </div>
+            <div className="p-6">
+              {locationOptions.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">
+                  No locations configured. Add your first location to get started.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {locationOptions.map((location, index) => (
+                    <div
+                      key={location.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <GripVertical className="w-4 h-4 text-gray-400" />
+                        <MapPin className="w-4 h-4 text-gray-500" />
+                        {editingLocation?.id === location.id ? (
+                          <input
+                            type="text"
+                            value={editingLocation.name}
+                            onChange={(e) => setEditingLocation({
+                              ...editingLocation,
+                              name: e.target.value
+                            })}
+                            className="px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                handleUpdateLocation(editingLocation);
+                              }
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <span className={`text-sm ${location.is_active ? 'text-gray-900' : 'text-gray-500'}`}>
+                            {location.name}
+                          </span>
+                        )}
+                        {!location.is_active && (
+                          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
 
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="notification_enabled"
-                  checked={workOrderSettings.notification_enabled}
-                  onChange={(e) => setWorkOrderSettings({
-                    ...workOrderSettings,
-                    notification_enabled: e.target.checked
-                  })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="notification_enabled" className="ml-2 block text-sm text-gray-900">
-                  Enable email notifications for work order updates
-                </label>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-gray-200">
-              <button
-                onClick={handleSaveWorkOrderSettings}
-                className="flex items-center px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Save Settings
-              </button>
+                      <div className="flex items-center space-x-2">
+                        {editingLocation?.id === location.id ? (
+                          <>
+                            <button
+                              onClick={() => handleUpdateLocation(editingLocation)}
+                              className="p-1 text-green-600 hover:text-green-800"
+                            >
+                              <Save className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setEditingLocation(null)}
+                              className="p-1 text-gray-600 hover:text-gray-800"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setEditingLocation(location)}
+                              className="p-1 text-blue-600 hover:text-blue-800"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                const updatedLocation = { ...location, is_active: !location.is_active };
+                                handleUpdateLocation(updatedLocation);
+                              }}
+                              className={`p-1 ${location.is_active ? 'text-gray-600 hover:text-gray-800' : 'text-green-600 hover:text-green-800'}`}
+                              title={location.is_active ? 'Deactivate' : 'Activate'}
+                            >
+                              {location.is_active ? (
+                                <X className="w-4 h-4" />
+                              ) : (
+                                <Plus className="w-4 h-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLocation(location.id)}
+                              className="p-1 text-red-600 hover:text-red-800"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -811,6 +1045,8 @@ function Settings() {
         </div>
       )}
 
+      {/* All existing modals remain the same */}
+      
       {/* Delete Confirmation Modal */}
       {deleteConfirmation.isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1032,6 +1268,55 @@ function Settings() {
                   className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-700"
                 >
                   Create Vehicle
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* New Location Modal */}
+      {showNewLocationForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-md mx-4">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Add New Location</h2>
+                <button
+                  onClick={() => setShowNewLocationForm(false)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <form onSubmit={handleCreateLocation} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Location Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newLocation.name}
+                  onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., District 1, Headquarters, Traffic Division"
+                />
+              </div>
+              <div className="flex justify-end gap-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowNewLocationForm(false)}
+                  className="px-4 py-2 text-gray-700 hover:text-gray-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Add Location
                 </button>
               </div>
             </form>
