@@ -29,7 +29,8 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
     setError(null);
 
     try {
-      if (!session?.user?.id || !user) {
+      // Only check for session - remove the user check since it's undefined
+      if (!session?.user?.id) {
         setError('User not authenticated.');
         return;
       }
@@ -46,6 +47,7 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
       const lastWorkOrderNumber = lastWorkOrder && lastWorkOrder.length > 0 ? lastWorkOrder[0].work_order_number : 0;
       const newWorkOrderNumber = lastWorkOrderNumber + 1;
 
+      // Fix the created_by field - use the user UUID, not email/name
       const { error } = await supabase
         .from('work_orders')
         .insert([{
@@ -54,11 +56,11 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
           description: formData.description,
           priority: formData.priority,
           location: formData.location,
-          created_by: user.name || session.user.email,
-          mileage: parseInt(formData.mileage) || 0, // Ensure this is a number
+          created_by: session.user.id, // Use the UUID from session
+          mileage: parseInt(formData.mileage) || 0,
           work_order_number: newWorkOrderNumber,
           notes: formData.notes,
-  }]);
+        }]);
 
       if (error) throw error;
       onClose();
