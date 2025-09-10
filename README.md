@@ -43,3 +43,21 @@ Clean your build cache:
 # Remove the dist folder and rebuild
 rm -rf dist
 npm run build
+
+Removed pre-deploy and deploy from package.json file and added deploy.yml.  leaving them in package.json required each deploy to happen locally in terminal and now it will auto deploy with github actions.  This keeps it consistent with the backup.yml file.
+
+latest chatgpt instructions:
+
+5. Deploy
+
+Push your code to main.
+
+GitHub Actions will automatically run the deploy.yml workflow.
+
+After it finishes, your site will be live at:
+
+https://rbyers87.github.io/PAPDfleetGoogle/
+
+
+✅ From now on, you don’t run npm run deploy manually.
+Just git push, and GitHub builds + deploys the site automatically with your Supabase env vars.
