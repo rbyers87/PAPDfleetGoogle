@@ -9,9 +9,7 @@
     "build": "vite build",
     "build:backup": "tsc",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@microsoft/microsoft-graph-client": "^3.0.7",
