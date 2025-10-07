@@ -8,16 +8,25 @@ const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Service Account Authentication (more reliable than OAuth)
-const GDRIVE_SERVICE_ACCOUNT_KEY = process.env.GDRIVE_SERVICE_ACCOUNT_KEY!;
-const GDRIVE_FOLDER_ID = process.env.GDRIVE_FOLDER_ID!;
+// Service Account Authentication
+const GDRIVE_SERVICE_ACCOUNT_KEY = process.env.GDRIVE_SERVICE_ACCOUNT_KEY;
+const GDRIVE_FOLDER_ID = process.env.GDRIVE_FOLDER_ID;
+
+// Validate environment variables
+if (!GDRIVE_SERVICE_ACCOUNT_KEY || !GDRIVE_FOLDER_ID) {
+  console.error('❌ Missing required environment variables:');
+  if (!GDRIVE_SERVICE_ACCOUNT_KEY) console.error('   - GDRIVE_SERVICE_ACCOUNT_KEY');
+  if (!GDRIVE_FOLDER_ID) console.error('   - GDRIVE_FOLDER_ID');
+  process.exit(1);
+}
 
 // Parse the service account key
 let serviceAccountKey;
 try {
   serviceAccountKey = JSON.parse(GDRIVE_SERVICE_ACCOUNT_KEY);
 } catch (error) {
-  console.error('❌ Failed to parse GDRIVE_SERVICE_ACCOUNT_KEY');
+  console.error('❌ Failed to parse GDRIVE_SERVICE_ACCOUNT_KEY. Make sure it is valid JSON.');
+  console.error('Error:', error);
   process.exit(1);
 }
 
@@ -59,6 +68,8 @@ async function deleteOldBackups() {
         await drive.files.delete({ fileId: file.id! });
         console.log(`🗑️  Deleted old backup: ${file.name}`);
       }
+    } else {
+      console.log(`ℹ️  Currently ${files.length} backup(s) stored (max: ${MAX_BACKUPS})`);
     }
   } catch (error) {
     console.error('⚠️  Error deleting old backups:', error);
@@ -121,13 +132,13 @@ async function backupAllTables() {
       body: fs.createReadStream(zipPath),
     };
 
-    await drive.files.create({
+    const uploadResponse = await drive.files.create({
       requestBody: fileMetadata,
       media: media,
       fields: 'id, name',
     });
 
-    console.log('☁️  Uploaded to Google Drive');
+    console.log(`☁️  Uploaded to Google Drive: ${uploadResponse.data.name}`);
     console.log('✅ Backup completed successfully!');
 
     // Cleanup
