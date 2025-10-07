@@ -21,8 +21,8 @@ interface WorkOrder {
   description: string;
   priority: 'low' | 'normal' | 'high' | 'urgent';
   location: string;
-  mileage: number | null; // Add this
-  notes: string | null; // Add this
+  mileage: number | null;
+  notes: string | null;
   resolved_at: string | null;
   resolved_by: string | null;
   resolution_notes: string | null;
@@ -57,13 +57,12 @@ function WorkOrders() {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [updateNotes, setUpdateNotes] = useState('');
   const [updating, setUpdating] = useState(false);
-  const [isNewWorkOrderModalOpen, setIsNewWorkOrderModalOpen] = useState(false);
 
   useEffect(() => {
     fetchWorkOrders();
   }, []);
 
-   async function fetchWorkOrders() {
+  async function fetchWorkOrders() {
     try {
       const { data, error } = await supabase
         .from('work_orders')
@@ -82,33 +81,50 @@ function WorkOrders() {
       console.error('Error:', err);
     } finally {
       setLoading(false);
+    }
   }
-}
 
   const handleUpdateStatus = async (newStatus: 'in_progress' | 'completed' | 'cancelled') => {
     if (!selectedWorkOrder) return;
 
     setUpdating(true);
     try {
-      const { error } = await supabase
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+
+      // Update work order
+      const { error: woError } = await supabase
         .from('work_orders')
         .update({
           status: newStatus,
           resolved_at: newStatus === 'completed' ? new Date().toISOString() : null,
-          resolved_by: newStatus === 'completed' ? (await supabase.auth.getUser()).data.user?.id : null,
+          resolved_by: newStatus === 'completed' ? userId : null,
           resolution_notes: updateNotes || null,
           updated_at: new Date().toISOString()
         })
         .eq('id', selectedWorkOrder.id);
 
-      if (error) throw error;
+      if (woError) throw woError;
+
+      // If status is completed, also update vehicle status to available
+      if (newStatus === 'completed') {
+        const { error: vehicleError } = await supabase
+          .from('vehicles')
+          .update({
+            status: 'available',
+          })
+          .eq('id', selectedWorkOrder.vehicle_id);
+
+        if (vehicleError) throw vehicleError;
+      }
 
       await fetchWorkOrders();
+      // Reset modal state
       setIsUpdateModalOpen(false);
       setSelectedWorkOrder(null);
       setUpdateNotes('');
     } catch (err) {
       console.error('Error updating work order:', err);
+      setError('Failed to update work order');
     } finally {
       setUpdating(false);
     }
@@ -150,6 +166,12 @@ function WorkOrders() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCloseModal = () => {
+    setIsUpdateModalOpen(false);
+    setSelectedWorkOrder(null);
+    setUpdateNotes('');
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -201,7 +223,6 @@ function WorkOrders() {
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || order.priority === priorityFilter;
     
-    // Safe search with null checks
     const unitNumber = order.vehicle?.unit_number?.toLowerCase() || '';
     const description = order.description?.toLowerCase() || '';
     const location = order.location?.toLowerCase() || '';
@@ -219,31 +240,29 @@ function WorkOrders() {
     return matchesStatus && matchesPriority && matchesSearch;
   });
 
-const handleDownloadPDF = async (workOrder: WorkOrder) => {
-  try {
-    // First, fetch the complete work order data with all fields
-    const { data: completeWorkOrder, error } = await supabase
-      .from('work_orders')
-      .select(`
-        *,
-        vehicle:vehicles(unit_number, make, model, year),
-        creator:profiles!work_orders_created_by_fkey(full_name, badge_number),
-        resolver:profiles!work_orders_resolved_by_fkey(full_name, badge_number)
-      `)
-      .eq('id', workOrder.id)
-      .single();
+  const handleDownloadPDF = async (workOrder: WorkOrder) => {
+    try {
+      const { data: completeWorkOrder, error } = await supabase
+        .from('work_orders')
+        .select(`
+          *,
+          vehicle:vehicles(unit_number, make, model, year),
+          creator:profiles!work_orders_created_by_fkey(full_name, badge_number),
+          resolver:profiles!work_orders_resolved_by_fkey(full_name, badge_number)
+        `)
+        .eq('id', workOrder.id)
+        .single();
 
-    if (error) throw error;
+      if (error) throw error;
 
-    if (completeWorkOrder) {
-      // Now generate PDF with complete data
-      await generateWorkOrderPDF(completeWorkOrder);
+      if (completeWorkOrder) {
+        await generateWorkOrderPDF(completeWorkOrder);
+      }
+    } catch (error) {
+      console.error('Error fetching complete work order:', error);
+      alert('Failed to generate PDF. Please try again.');
     }
-  } catch (error) {
-    console.error('Error fetching complete work order:', error);
-    alert('Failed to generate PDF. Please try again.');
-  }
-};
+  };
 
   if (loading) {
     return (
@@ -435,11 +454,7 @@ const handleDownloadPDF = async (workOrder: WorkOrder) => {
 
               <div className="flex justify-end gap-4 pt-4">
                 <button
-                  onClick={() => {
-                    setIsUpdateModalOpen(false);
-                    setSelectedWorkOrder(null);
-                    setUpdateNotes('');
-                  }}
+                  onClick={handleCloseModal}
                   className="px-4 py-2 text-gray-700 hover:text-gray-900"
                   disabled={updating}
                 >
