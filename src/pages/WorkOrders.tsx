@@ -474,13 +474,6 @@ function WorkOrders() {
                 >
                   {updating ? 'Updating...' : 'Mark Completed'}
                 </button>
-                <button
-                  onClick={() => handleUpdateStatus('cancelled')}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 disabled:opacity-50"
-                  disabled={updating}
-                >
-                  {updating ? 'Updating...' : 'Cancel Work Order'}
-                </button>
               </div>
             </div>
           </div>
