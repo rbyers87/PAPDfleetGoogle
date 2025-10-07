@@ -9,72 +9,30 @@ interface WorkOrderModalProps {
   vehicleId: string;
   unitNumber: string;
   currentLocation: string;
+  issueDescription?: string;
 }
 
-interface LocationOption {
-  id: string;
-  name: string;
-  is_active: boolean;
-}
-
-function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocation }: WorkOrderModalProps) {
-  const { session, user } = useAuthStore();
+function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocation, issueDescription = '' }: WorkOrderModalProps) {
+  const { session } = useAuthStore();
   const [formData, setFormData] = useState({
-    description: '',
+    description: issueDescription,
     priority: 'normal',
     location: currentLocation,
     mileage: '',
-    notes: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [locationOptions, setLocationOptions] = useState<LocationOption[]>([]);
-  const [useLocationDropdown, setUseLocationDropdown] = useState(true);
 
   useEffect(() => {
     if (isOpen) {
-      fetchLocationSettings();
-      fetchLocationOptions();
+      setFormData({
+        description: issueDescription,
+        priority: 'normal',
+        location: currentLocation,
+        mileage: '',
+      });
     }
-  }, [isOpen]);
-
-  const fetchLocationSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('work_order_settings')
-        .select('use_location_dropdown')
-        .limit(1)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching settings:', error);
-        return;
-      }
-
-      if (data) {
-        setUseLocationDropdown(data.use_location_dropdown ?? true);
-      }
-    } catch (err) {
-      console.error('Error:', err);
-    }
-  };
-
-  const fetchLocationOptions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('location_options')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-
-      if (error) throw error;
-
-      setLocationOptions(data || []);
-    } catch (err) {
-      console.error('Error fetching location options:', err);
-      setLocationOptions([]);
-    }
-  };
+  }, [isOpen, currentLocation, issueDescription]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +68,7 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
           created_by: session.user.id,
           mileage: parseInt(formData.mileage) || 0,
           work_order_number: newWorkOrderNumber,
-          notes: formData.notes,
+          notes: null,
         }]);
 
       if (error) throw error;
@@ -121,7 +79,6 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
         priority: 'normal',
         location: currentLocation,
         mileage: '',
-        notes: '',
       });
       
       onClose();
@@ -165,22 +122,9 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
               required
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
+              rows={4}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Describe the issue that needs attention..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Additional Notes
-            </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={2}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Any additional information or comments..."
             />
           </div>
 
@@ -204,30 +148,14 @@ function WorkOrderModal({ isOpen, onClose, vehicleId, unitNumber, currentLocatio
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Location
             </label>
-            {useLocationDropdown && locationOptions.length > 0 ? (
-              <select
-                required
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Select a location...</option>
-                {locationOptions.map((location) => (
-                  <option key={location.id} value={location.name}>
-                    {location.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                required
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Where is the vehicle located?"
-              />
-            )}
+            <input
+              type="text"
+              required
+              value={formData.location}
+              readOnly
+              className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed"
+            />
+            <p className="mt-1 text-xs text-gray-500">Location is set from the vehicle status</p>
           </div>
 
           <div>
