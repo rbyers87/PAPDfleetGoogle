@@ -96,8 +96,8 @@ function WorkOrders() {
         .from('work_orders')
         .update({
           status: newStatus,
-          resolved_at: newStatus === 'completed' ? new Date().toISOString() : null,
-          resolved_by: newStatus === 'completed' ? userId : null,
+          resolved_at: ['completed', 'cancelled'].includes(newStatus) ? new Date().toISOString() : null,
+          resolved_by: ['completed', 'cancelled'].includes(newStatus) ? userId : null,
           resolution_notes: updateNotes || null,
           updated_at: new Date().toISOString()
         })
@@ -361,7 +361,7 @@ function WorkOrders() {
                       <Download className="w-4 h-4 mr-1 inline-block" />
                       Download PDF
                     </button>
-                    {isAdmin && order.status === 'pending' && (
+                    {isAdmin && ['pending', 'in_progress'].includes(order.status) && (
                       <button
                         onClick={() => {
                           setSelectedWorkOrder(order);
@@ -372,7 +372,7 @@ function WorkOrders() {
                         Update Status
                       </button>
                     )}
-                    {isAdmin && order.status !== 'completed' && (
+                    {isAdmin && order.status !== 'completed' && order.status !== 'cancelled' && (
                       <button
                         onClick={() => handleCompleteWorkOrder(order)}
                         className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-500"
@@ -441,45 +441,45 @@ function WorkOrders() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Resolution Notes
+                  Resolution Notes (Optional)
                 </label>
                 <textarea
                   value={updateNotes}
                   onChange={(e) => setUpdateNotes(e.target.value)}
                   rows={4}
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Add any notes about the resolution..."
+                  placeholder="Add any notes about the status change..."
                 />
               </div>
 
-              <div className="flex justify-end gap-4 pt-4">
+              <div className="flex flex-wrap justify-end gap-2 pt-4 border-t">
                 <button
                   onClick={handleCloseModal}
-                  className="px-4 py-2 text-gray-700 hover:text-gray-900"
+                  className="px-4 py-2 text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg"
                   disabled={updating}
                 >
-                  Cancel
+                  Close
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('in_progress')}
-                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                   disabled={updating}
                 >
-                  Mark In Progress
+                  {updating ? 'Updating...' : 'Mark In Progress'}
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('completed')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 disabled:opacity-50"
                   disabled={updating}
                 >
-                  Mark Completed
+                  {updating ? 'Updating...' : 'Mark Completed'}
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('cancelled')}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500"
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 disabled:opacity-50"
                   disabled={updating}
                 >
-                  Cancel Order
+                  {updating ? 'Updating...' : 'Cancel Work Order'}
                 </button>
               </div>
             </div>
