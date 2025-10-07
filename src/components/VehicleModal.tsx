@@ -9,6 +9,12 @@ interface Profile {
   badge_number: string | null;
 }
 
+interface LocationOption {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
+
 interface VehicleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -22,7 +28,7 @@ interface VehicleModalProps {
     assigned_to: string | null;
     current_location: string | null;
     notes: string | null;
-    is_take_home: boolean; // New property
+    is_take_home: boolean;
   };
   onVehicleUpdate: () => void;
 }
@@ -37,9 +43,10 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
     assigned_to: '',
     current_location: '',
     notes: '',
-    is_take_home: false, // New property
+    is_take_home: false,
   });
   const [officers, setOfficers] = useState<Profile[]>([]);
+  const [locationOptions, setLocationOptions] = useState<LocationOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showWorkOrderModal, setShowWorkOrderModal] = useState(false);
@@ -55,7 +62,7 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
         assigned_to: vehicle.assigned_to || '',
         current_location: vehicle.current_location || '',
         notes: vehicle.notes || '',
-        is_take_home: vehicle.is_take_home, // New property
+        is_take_home: vehicle.is_take_home,
       });
     } else {
       setFormData({
@@ -67,13 +74,14 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
         assigned_to: '',
         current_location: '',
         notes: '',
-        is_take_home: false, // New property
+        is_take_home: false,
       });
     }
   }, [vehicle]);
 
   useEffect(() => {
     fetchOfficers();
+    fetchLocationOptions();
   }, []);
 
   async function fetchOfficers() {
@@ -90,6 +98,22 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
     }
   }
 
+  async function fetchLocationOptions() {
+    try {
+      const { data, error } = await supabase
+        .from('location_options')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      setLocationOptions(data || []);
+    } catch (err) {
+      console.error('Error fetching location options:', err);
+      setLocationOptions([]);
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -101,7 +125,7 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
         assigned_to: formData.status === 'assigned' ? formData.assigned_to : null,
         current_location: formData.status === 'out_of_service' ? formData.current_location : null,
         notes: ['out_of_service', 'assigned'].includes(formData.status) ? formData.notes : null,
-        is_take_home: formData.is_take_home, // Include the new property
+        is_take_home: formData.is_take_home,
       };
 
       if (vehicle) {
@@ -113,7 +137,7 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
             assigned_to: vehicleData.assigned_to,
             current_location: vehicleData.current_location,
             notes: vehicleData.notes,
-            is_take_home: vehicleData.is_take_home, // Update the new property
+            is_take_home: vehicleData.is_take_home,
           })
           .eq('id', vehicle.id);
 
@@ -305,14 +329,30 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Current Location
                 </label>
-                <input
-                  type="text"
-                  required={formData.status === 'out_of_service'}
-                  value={formData.current_location}
-                  onChange={(e) => setFormData({ ...formData, current_location: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., Maintenance Shop, Body Shop, etc."
-                />
+                {locationOptions.length > 0 ? (
+                  <select
+                    required={formData.status === 'out_of_service'}
+                    value={formData.current_location}
+                    onChange={(e) => setFormData({ ...formData, current_location: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select a location...</option>
+                    {locationOptions.map((location) => (
+                      <option key={location.id} value={location.name}>
+                        {location.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    required={formData.status === 'out_of_service'}
+                    value={formData.current_location}
+                    onChange={(e) => setFormData({ ...formData, current_location: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., Maintenance Shop, Body Shop, etc."
+                  />
+                )}
               </div>
             )}
 
@@ -334,15 +374,15 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Take Home Unit?
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.is_take_home}
+                  onChange={(e) => setFormData({ ...formData, is_take_home: e.target.checked })}
+                  className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="text-sm font-medium text-gray-700">Take Home Unit?</span>
               </label>
-              <input
-                type="checkbox"
-                checked={formData.is_take_home}
-                onChange={(e) => setFormData({ ...formData, is_take_home: e.target.checked })}
-                className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
             </div>
 
             <div className="flex justify-end gap-4 pt-4 border-t">
@@ -378,6 +418,7 @@ function VehicleModal({ isOpen, onClose, vehicle, onVehicleUpdate }: VehicleModa
           vehicleId={vehicle.id}
           unitNumber={vehicle.unit_number}
           currentLocation={formData.current_location}
+          issueDescription={formData.notes}
         />
       )}
     </>
