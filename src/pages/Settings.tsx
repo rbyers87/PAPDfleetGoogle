@@ -309,49 +309,50 @@ function Settings() {
 
   // ... (keeping all the existing user and vehicle functions exactly as they were)
 
-  async function handleCreateUser(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
+ async function handleCreateUser(e: React.FormEvent) {
+  e.preventDefault();
+  setError(null);
 
-    try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newProfile.email,
-        password: newProfile.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/login`
-        }
-      });
+  try {
+    // Create user using admin API to automatically confirm email
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: newProfile.email,
+      password: newProfile.password,
+      email_confirm: true // ✅ Automatically confirms email
+    });
 
-      if (authError) throw authError;
+    if (authError) throw authError;
 
-      if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert([{
-            id: authData.user.id,
-            role: newProfile.role,
-            full_name: newProfile.full_name,
-            badge_number: newProfile.badge_number || null,
-            email: newProfile.email
-          }]);
+    if (authData.user) {
+      // Add user profile to your profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert([{
+          id: authData.user.id,
+          role: newProfile.role,
+          full_name: newProfile.full_name,
+          badge_number: newProfile.badge_number || null,
+          email: newProfile.email
+        }]);
 
-        if (profileError) throw profileError;
-      }
-
-      setShowNewUserForm(false);
-      setNewProfile({
-        email: '',
-        full_name: '',
-        badge_number: '',
-        role: 'user',
-        password: ''
-      });
-      fetchProfiles();
-    } catch (err) {
-      setError('Failed to create user');
-      console.error('Error:', err);
+      if (profileError) throw profileError;
     }
+
+    setShowNewUserForm(false);
+    setNewProfile({
+      email: '',
+      full_name: '',
+      badge_number: '',
+      role: 'user',
+      password: ''
+    });
+
+    fetchProfiles();
+  } catch (err) {
+    setError('Failed to create user');
+    console.error('Error:', err);
   }
+}
 
   async function handleUpdateProfile(profile: Profile) {
     try {
