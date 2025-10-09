@@ -309,33 +309,30 @@ function Settings() {
 
   // ... (keeping all the existing user and vehicle functions exactly as they were)
 
- async function handleCreateUser(e: React.FormEvent) {
+async function handleCreateUser(e: React.FormEvent) {
   e.preventDefault();
   setError(null);
 
   try {
-    // Create user using admin API to automatically confirm email
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: newProfile.email,
-      password: newProfile.password,
-      email_confirm: true // ✅ Automatically confirms email
+    // Call your Edge Function
+    const res = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: newProfile.email,
+        password: newProfile.password,
+        full_name: newProfile.full_name,
+        role: newProfile.role,
+        badge_number: newProfile.badge_number || null
+      })
     });
 
-    if (authError) throw authError;
+    const data = await res.json();
 
-    if (authData.user) {
-      // Add user profile to your profiles table
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert([{
-          id: authData.user.id,
-          role: newProfile.role,
-          full_name: newProfile.full_name,
-          badge_number: newProfile.badge_number || null,
-          email: newProfile.email
-        }]);
-
-      if (profileError) throw profileError;
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to create user');
     }
 
     setShowNewUserForm(false);
@@ -348,11 +345,12 @@ function Settings() {
     });
 
     fetchProfiles();
-  } catch (err) {
-    setError('Failed to create user');
+  } catch (err: any) {
+    setError(err.message || 'Failed to create user');
     console.error('Error:', err);
   }
 }
+
 
   async function handleUpdateProfile(profile: Profile) {
     try {
