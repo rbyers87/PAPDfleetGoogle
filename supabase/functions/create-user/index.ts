@@ -8,7 +8,7 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseKey)
 serve(async (req) => {
   // Allow all origins (for testing only)
   const headers = {
-    'Access-Control-Allow-Origin': '*', // change back to 'https://rbyers87.github.io' in production
+    'Access-Control-Allow-Origin': 'https://rbyers87.github.io/PAPDfleetGoogle/', // '*' allows any to work
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   }
