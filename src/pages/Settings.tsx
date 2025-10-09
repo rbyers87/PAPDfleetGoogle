@@ -315,19 +315,17 @@ async function handleCreateUser(e: React.FormEvent) {
 
   try {
     // Call your Edge Function
-    const res = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/create-user`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        email: newProfile.email,
-        password: newProfile.password,
-        full_name: newProfile.full_name,
-        role: newProfile.role,
-        badge_number: newProfile.badge_number || null
-      })
-    });
+    const res = await fetch('https://htgcxuxigtqvcekizs.functions.supabase.co/create-user', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ 
+    email: newProfile.email,
+    password: newProfile.password,
+    full_name: newProfile.full_name,
+    role: newProfile.role,
+    badge_number: newProfile.badge_number || null
+  })
+});
 
     const data = await res.json();
 
