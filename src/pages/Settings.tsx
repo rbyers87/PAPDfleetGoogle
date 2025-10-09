@@ -14,8 +14,10 @@ import {
   X,
   ClipboardList,
   MapPin,
-  GripVertical
+  GripVertical,
+  Key
 } from 'lucide-react';
+import PasswordModal from '../components/PasswordModal';
 
 interface Profile {
   id: string;
@@ -53,7 +55,7 @@ interface LocationOption {
 
 function Settings() {
   const navigate = useNavigate();
-  const { isAdmin } = useAuthStore();
+  const { isAdmin, session } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'users' | 'vehicles' | 'workorders'>('users');
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -75,6 +77,16 @@ function Settings() {
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [showNewVehicleForm, setShowNewVehicleForm] = useState(false);
   const [showNewLocationForm, setShowNewLocationForm] = useState(false);
+  
+  // Password modal state
+  const [passwordModal, setPasswordModal] = useState<{
+    isOpen: boolean;
+    profile: Profile | null;
+  }>({
+    isOpen: false,
+    profile: null
+  });
+
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
     vehicleId: string;
