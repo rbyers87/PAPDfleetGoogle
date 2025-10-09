@@ -18,10 +18,10 @@ interface PasswordModalProps {
   isAdminReset?: boolean;
 }
 
-function PasswordModal({ 
-  isOpen, 
-  onClose, 
-  profile, 
+function PasswordModal({
+  isOpen,
+  onClose,
+  profile,
   isAdminReset = false
 }: PasswordModalProps) {
   const navigate = useNavigate();
@@ -74,7 +74,7 @@ function PasswordModal({
         setSuccess(true);
         setTimeout(() => {
           onClose();
-        }, 3500);
+        }, 4000); // ⏰ Increased delay for admin reset success
       } else {
         // User changes their own password
         const errors = validatePassword(formData.newPassword);
@@ -99,7 +99,7 @@ function PasswordModal({
         setSuccess(true);
         setTimeout(() => {
           onClose();
-          navigate('/settings'); // optional redirect
+          navigate('/settings', { replace: true });
           setFormData({ newPassword: '', confirmPassword: '' });
           setValidationErrors([]);
         }, 2000);
@@ -132,10 +132,9 @@ function PasswordModal({
             ) : (
               <Key className="w-5 h-5 mr-2 text-blue-800" />
             )}
-            {isAdminReset 
+            {isAdminReset
               ? `Send Password Reset - ${profile?.full_name}`
-              : 'Change Password'
-            }
+              : 'Change Password'}
           </h2>
           <button
             onClick={handleClose}
@@ -159,10 +158,9 @@ function PasswordModal({
                 <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-0.5" />
                 <div>
                   <p className="text-sm text-green-700 font-medium">
-                    {isAdminReset 
+                    {isAdminReset
                       ? 'Password reset email sent successfully!'
-                      : 'Password updated successfully!'
-                    }
+                      : 'Password updated successfully!'}
                   </p>
                   {isAdminReset && (
                     <p className="text-xs text-green-600 mt-1">
@@ -213,10 +211,16 @@ function PasswordModal({
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                    onClick={() =>
+                      setShowPasswords({ ...showPasswords, new: !showPasswords.new })
+                    }
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPasswords.new ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
                 {formData.newPassword && validationErrors.length > 0 && (
@@ -237,21 +241,33 @@ function PasswordModal({
                     type={showPasswords.confirm ? 'text' : 'password'}
                     required
                     value={formData.confirmPassword}
-                    onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                    onChange={(e) =>
+                      handlePasswordChange('confirmPassword', e.target.value)
+                    }
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10"
                     disabled={loading}
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
+                    onClick={() =>
+                      setShowPasswords({
+                        ...showPasswords,
+                        confirm: !showPasswords.confirm
+                      })
+                    }
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPasswords.confirm ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
-                {formData.confirmPassword && formData.newPassword !== formData.confirmPassword && (
-                  <p className="mt-1 text-xs text-red-600">Passwords do not match</p>
-                )}
+                {formData.confirmPassword &&
+                  formData.newPassword !== formData.confirmPassword && (
+                    <p className="mt-1 text-xs text-red-600">Passwords do not match</p>
+                  )}
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -280,9 +296,8 @@ function PasswordModal({
               className={`
                 px-4 py-2 bg-blue-800 text-white rounded-lg font-medium flex items-center
                 ${loading || (!isAdminReset && validationErrors.length > 0)
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : 'hover:bg-blue-700'
-                }
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-blue-700'}
               `}
             >
               {loading ? (
