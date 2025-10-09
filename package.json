@@ -19,7 +19,6 @@
     "date-fns": "^3.3.1",
     "gh-pages": "^6.3.0",
     "googleapis": "^157.0.0",
-    "archiver": "^6.0.1",
     "isomorphic-fetch": "^3.0.0",
     "json2csv": "^6.0.0-alpha.2",
     "lucide-react": "^0.344.0",
