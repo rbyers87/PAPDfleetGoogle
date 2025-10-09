@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Eye, EyeOff, CheckCircle, Key, Mail } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 interface Profile {
   id: string;
@@ -23,13 +24,13 @@ function PasswordModal({
   profile, 
   isAdminReset = false
 }: PasswordModalProps) {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
-    currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
   const [showPasswords, setShowPasswords] = useState({
-    current: false,
     new: false,
     confirm: false
   });
@@ -40,25 +41,16 @@ function PasswordModal({
 
   const validatePassword = (password: string): string[] => {
     const errors: string[] = [];
-    if (password.length < 8) {
-      errors.push('Password must be at least 8 characters long');
-    }
-    if (!/[A-Z]/.test(password)) {
-      errors.push('Password must contain at least one uppercase letter');
-    }
-    if (!/[a-z]/.test(password)) {
-      errors.push('Password must contain at least one lowercase letter');
-    }
-    if (!/[0-9]/.test(password)) {
-      errors.push('Password must contain at least one number');
-    }
+    if (password.length < 8) errors.push('Password must be at least 8 characters long');
+    if (!/[A-Z]/.test(password)) errors.push('Password must contain at least one uppercase letter');
+    if (!/[a-z]/.test(password)) errors.push('Password must contain at least one lowercase letter');
+    if (!/[0-9]/.test(password)) errors.push('Password must contain at least one number');
     return errors;
   };
 
   const handlePasswordChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
     setError(null);
-    
     if (field === 'newPassword') {
       const errors = validatePassword(value);
       setValidationErrors(errors);
@@ -73,23 +65,18 @@ function PasswordModal({
 
     try {
       if (isAdminReset && profile) {
-        // Admin triggering password reset email for another user
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-          profile.email,
-          {
-            redirectTo: `${window.location.origin}/reset-password`
-          }
-        );
-        
+        // Admin triggers reset email
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(profile.email, {
+          redirectTo: `${window.location.origin}/reset-password`
+        });
         if (resetError) throw resetError;
-        
+
         setSuccess(true);
         setTimeout(() => {
           onClose();
-        }, 2000);
+        }, 3500);
       } else {
-        // User changing their own password
-        // Validate password strength
+        // User changes their own password
         const errors = validatePassword(formData.newPassword);
         if (errors.length > 0) {
           setError('Please fix the password requirements');
@@ -98,7 +85,6 @@ function PasswordModal({
           return;
         }
 
-        // Check if passwords match
         if (formData.newPassword !== formData.confirmPassword) {
           setError('New passwords do not match');
           setLoading(false);
@@ -108,15 +94,15 @@ function PasswordModal({
         const { error: authError } = await supabase.auth.updateUser({
           password: formData.newPassword
         });
-        
         if (authError) throw authError;
 
         setSuccess(true);
         setTimeout(() => {
           onClose();
-          setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+          navigate('/settings'); // optional redirect
+          setFormData({ newPassword: '', confirmPassword: '' });
           setValidationErrors([]);
-        }, 1500);
+        }, 2000);
       }
     } catch (err: any) {
       console.error('Error updating password:', err);
@@ -127,7 +113,7 @@ function PasswordModal({
   };
 
   const handleClose = () => {
-    setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setFormData({ newPassword: '', confirmPassword: '' });
     setError(null);
     setSuccess(false);
     setValidationErrors([]);
@@ -189,7 +175,6 @@ function PasswordModal({
           )}
 
           {isAdminReset ? (
-            // Admin reset view - just confirmation
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start">
@@ -212,31 +197,7 @@ function PasswordModal({
               </div>
             </div>
           ) : (
-            // User self-service password change
             <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Current Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPasswords.current ? 'text' : 'password'}
-                    required
-                    value={formData.currentPassword}
-                    onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10"
-                    disabled={loading}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   New Password
@@ -258,7 +219,6 @@ function PasswordModal({
                     {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                
                 {formData.newPassword && validationErrors.length > 0 && (
                   <div className="mt-2 space-y-1">
                     {validationErrors.map((err, idx) => (
