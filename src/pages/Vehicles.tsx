@@ -12,7 +12,12 @@ import {
   Settings,
   History,
   LayoutGrid,
-  List
+  List,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 import VehicleModal from '../components/VehicleModal';
 import VehicleHistoryModal from '../components/VehicleHistoryModal';
@@ -35,6 +40,9 @@ interface Vehicle {
 }
 
 type ViewMode = 'grid' | 'list';
+type SortField = 'unit_number' | 'status' | 'assignment' | 'take_home';
+type SortDirection = 'asc' | 'desc';
+type GroupField = 'status' | 'take_home' | null;
 
 function Vehicles() {
   const { isAdmin } = useAuthStore();
@@ -48,7 +56,13 @@ function Vehicles() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedHistoryVehicle, setSelectedHistoryVehicle] = useState<{ id: string; unitNumber: string } | null>(null);
   const [showTakeHome, setShowTakeHome] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('grid'); // New state for view mode
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  
+  // Sorting and grouping state
+  const [sortField, setSortField] = useState<SortField>('unit_number');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [groupField, setGroupField] = useState<GroupField>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchVehicles();
@@ -92,6 +106,137 @@ function Vehicles() {
     setIsHistoryModalOpen(true);
   };
 
+  // Handle column header click for sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, set to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    // Clear grouping when sorting by a different field
+    setGroupField(null);
+  };
+
+  // Handle column header click for grouping
+  const handleGroup = (field: GroupField) => {
+    if (groupField === field) {
+      // Toggle grouping off if clicking the same field
+      setGroupField(null);
+    } else {
+      // Set new group field
+      setGroupField(field);
+      // Expand all groups by default
+      const allGroups = getUniqueValues(field);
+      setExpandedGroups(new Set(allGroups));
+    }
+    // Reset sorting to default when grouping
+    setSortField('unit_number');
+    setSortDirection('asc');
+  };
+
+  // Get unique values for grouping
+  const getUniqueValues = (field: GroupField): string[] => {
+    if (!field) return [];
+    
+    const values = filteredVehicles.map(vehicle => {
+      switch (field) {
+        case 'status':
+          return vehicle.status.replace(/_/g, ' ');
+        case 'take_home':
+          return vehicle.is_take_home ? 'Take Home' : 'Non-Take Home';
+        default:
+          return '';
+      }
+    });
+    
+    return [...new Set(values)].sort();
+  };
+
+  // Toggle group expansion
+  const toggleGroup = (groupValue: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(groupValue)) {
+      newExpanded.delete(groupValue);
+    } else {
+      newExpanded.add(groupValue);
+    }
+    setExpandedGroups(newExpanded);
+  };
+
+  // Expand all groups
+  const expandAllGroups = () => {
+    const allGroups = getUniqueValues(groupField);
+    setExpandedGroups(new Set(allGroups));
+  };
+
+  // Collapse all groups
+  const collapseAllGroups = () => {
+    setExpandedGroups(new Set());
+  };
+
+  // Sort vehicles
+  const sortVehicles = (vehiclesToSort: Vehicle[]): Vehicle[] => {
+    return [...vehiclesToSort].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case 'unit_number':
+          // Extract numeric part for natural sorting
+          const numA = parseInt(a.unit_number.replace(/\D/g, '')) || 0;
+          const numB = parseInt(b.unit_number.replace(/\D/g, '')) || 0;
+          comparison = numA - numB;
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case 'assignment':
+          const assignmentA = a.profile?.full_name || a.current_location || '';
+          const assignmentB = b.profile?.full_name || b.current_location || '';
+          comparison = assignmentA.localeCompare(assignmentB);
+          break;
+        case 'take_home':
+          comparison = (a.is_take_home === b.is_take_home) ? 0 : a.is_take_home ? -1 : 1;
+          break;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  };
+
+  // Group vehicles
+  const groupVehicles = (vehiclesToGroup: Vehicle[]): Map<string, Vehicle[]> => {
+    if (!groupField) {
+      const map = new Map();
+      map.set('all', vehiclesToGroup);
+      return map;
+    }
+
+    const grouped = new Map<string, Vehicle[]>();
+    
+    vehiclesToGroup.forEach(vehicle => {
+      let key = '';
+      switch (groupField) {
+        case 'status':
+          key = vehicle.status.replace(/_/g, ' ');
+          break;
+        case 'take_home':
+          key = vehicle.is_take_home ? 'Take Home' : 'Non-Take Home';
+          break;
+      }
+      
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+      grouped.get(key)!.push(vehicle);
+    });
+    
+    // Sort groups by key
+    return new Map([...grouped.entries()].sort());
+  };
+
   const filteredVehicles = vehicles.filter(vehicle => {
     const matchesStatus = statusFilter === 'all' || vehicle.status === statusFilter;
     
@@ -111,6 +256,10 @@ function Vehicles() {
     
     return matchesStatus && matchesSearch && matchesTakeHome;
   });
+
+  // Get sorted and grouped vehicles
+  const sortedVehicles = sortVehicles(filteredVehicles);
+  const groupedVehicles = groupVehicles(sortedVehicles);
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -136,6 +285,24 @@ function Vehicles() {
       default:
         return null;
     }
+  };
+
+  // Get sort icon for column headers
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 ml-1 text-gray-400" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="w-4 h-4 ml-1 text-blue-600" />
+      : <ArrowDown className="w-4 h-4 ml-1 text-blue-600" />;
+  };
+
+  // Get group indicator for column headers
+  const getGroupIndicator = (field: GroupField) => {
+    if (groupField === field) {
+      return <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">grouped</span>;
+    }
+    return null;
   };
 
   // Render vehicle card for grid view
@@ -278,6 +445,56 @@ function Vehicles() {
     </tr>
   );
 
+  // Render grouped list view
+  const renderGroupedList = () => {
+    const rows: JSX.Element[] = [];
+    
+    groupedVehicles.forEach((vehiclesInGroup, groupKey) => {
+      if (groupKey === 'all') {
+        // No grouping, just render all rows
+        vehiclesInGroup.forEach(vehicle => {
+          rows.push(renderVehicleRow(vehicle));
+        });
+      } else {
+        const isExpanded = expandedGroups.has(groupKey);
+        const groupCount = vehiclesInGroup.length;
+        
+        // Group header row
+        rows.push(
+          <tr key={`group-${groupKey}`} className="bg-gray-50">
+            <td colSpan={5} className="px-6 py-3">
+              <div className="flex items-center">
+                <button
+                  onClick={() => toggleGroup(groupKey)}
+                  className="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4 mr-2" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 mr-2" />
+                  )}
+                  <span>{groupKey}</span>
+                  <span className="ml-2 text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">
+                    {groupCount} {groupCount === 1 ? 'vehicle' : 'vehicles'}
+                  </span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        );
+        
+        // Group content rows (if expanded)
+        if (isExpanded) {
+          vehiclesInGroup.forEach(vehicle => {
+            rows.push(renderVehicleRow(vehicle));
+          });
+        }
+      }
+    });
+    
+    return rows;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -380,6 +597,31 @@ function Vehicles() {
           </div>
         </div>
 
+        {/* Group controls for list view */}
+        {viewMode === 'list' && groupField && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-600">Grouped by: {groupField === 'status' ? 'Status' : 'Take Home'}</span>
+            <button
+              onClick={expandAllGroups}
+              className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+            >
+              Expand All
+            </button>
+            <button
+              onClick={collapseAllGroups}
+              className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+            >
+              Collapse All
+            </button>
+            <button
+              onClick={() => setGroupField(null)}
+              className="text-gray-600 hover:text-gray-800 text-xs font-medium ml-2"
+            >
+              Clear Grouping
+            </button>
+          </div>
+        )}
+
         {/* Conditional rendering based on view mode */}
         {viewMode === 'grid' ? (
           // Grid View
@@ -387,22 +629,56 @@ function Vehicles() {
             {filteredVehicles.map(renderVehicleCard)}
           </div>
         ) : (
-          // List View
+          // List View with sorting and grouping
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vehicle
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                    onClick={() => handleSort('unit_number')}
+                    onDoubleClick={() => handleGroup(null)} // Double-click to clear grouping
+                  >
+                    <div className="flex items-center">
+                      Vehicle
+                      {getSortIcon('unit_number')}
+                    </div>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                    onClick={() => handleSort('status')}
+                    onDoubleClick={() => handleGroup('status')}
+                  >
+                    <div className="flex items-center">
+                      Status
+                      {getSortIcon('status')}
+                      {getGroupIndicator('status')}
+                    </div>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assignment/Location
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                    onClick={() => handleSort('assignment')}
+                    onDoubleClick={() => handleGroup(null)}
+                  >
+                    <div className="flex items-center">
+                      Assignment/Location
+                      {getSortIcon('assignment')}
+                    </div>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Take Home
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                    onClick={() => handleSort('take_home')}
+                    onDoubleClick={() => handleGroup('take_home')}
+                  >
+                    <div className="flex items-center">
+                      Take Home
+                      {getSortIcon('take_home')}
+                      {getGroupIndicator('take_home')}
+                    </div>
                   </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -410,7 +686,7 @@ function Vehicles() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredVehicles.map(renderVehicleRow)}
+                {renderGroupedList()}
               </tbody>
             </table>
           </div>
