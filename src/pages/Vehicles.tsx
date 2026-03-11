@@ -10,7 +10,9 @@ import {
   Filter,
   Plus,
   Settings,
-  History
+  History,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import VehicleModal from '../components/VehicleModal';
 import VehicleHistoryModal from '../components/VehicleHistoryModal';
@@ -25,12 +27,14 @@ interface Vehicle {
   assigned_to: string | null;
   current_location: string | null;
   notes: string | null;
-  is_take_home: boolean; // New property
+  is_take_home: boolean;
   profile?: {
     full_name: string;
     badge_number: string;
   };
 }
+
+type ViewMode = 'grid' | 'list';
 
 function Vehicles() {
   const { isAdmin } = useAuthStore();
@@ -43,7 +47,8 @@ function Vehicles() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | undefined>(undefined);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedHistoryVehicle, setSelectedHistoryVehicle] = useState<{ id: string; unitNumber: string } | null>(null);
-  const [showTakeHome, setShowTakeHome] = useState(false); // New state for Take Home filter
+  const [showTakeHome, setShowTakeHome] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid'); // New state for view mode
 
   useEffect(() => {
     fetchVehicles();
@@ -133,6 +138,146 @@ function Vehicles() {
     }
   };
 
+  // Render vehicle card for grid view
+  const renderVehicleCard = (vehicle: Vehicle) => (
+    <div
+      key={vehicle.id}
+      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+    >
+      <div className="p-6">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Unit #{vehicle.unit_number}
+            </h3>
+            <p className="text-gray-600">
+              {vehicle.year} {vehicle.make} {vehicle.model}
+            </p>
+          </div>
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeClass(vehicle.status)}`}>
+            {getStatusIcon(vehicle.status)}
+            <span className="ml-2 capitalize">{vehicle.status.replace(/_/g, ' ')}</span>
+          </span>
+        </div>
+
+        {vehicle.status === 'assigned' && vehicle.profile && (
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Assigned to:</strong> {vehicle.profile.full_name}
+              {vehicle.profile.badge_number && ` (Badge #${vehicle.profile.badge_number})`}
+            </p>
+          </div>
+        )}
+
+        {vehicle.status === 'out_of_service' && (
+          <div className="mb-4 p-3 bg-red-50 rounded-lg">
+            <p className="text-sm text-red-800">
+              <strong>Location:</strong> {vehicle.current_location}
+            </p>
+            {vehicle.notes && (
+              <p className="text-sm text-red-800 mt-1">
+                <strong>Notes:</strong> {vehicle.notes}
+              </p>
+            )}
+          </div>
+        )}
+
+        {vehicle.is_take_home && (
+          <div className="mb-4 p-3 bg-green-50 rounded-lg">
+            <p className="text-sm text-green-800">
+              <strong>Take Home Unit</strong>
+            </p>
+          </div>
+        )}
+
+        <div className="mt-4 flex justify-end gap-4">
+          <button 
+            onClick={() => handleViewHistory(vehicle)}
+            className="flex items-center text-gray-600 hover:text-gray-800 text-sm font-medium"
+          >
+            <History className="w-4 h-4 mr-1" />
+            History
+          </button>
+          {isAdmin && (
+            <button 
+              onClick={() => handleEditVehicle(vehicle)}
+              className="flex items-center text-blue-800 hover:text-blue-600 text-sm font-medium"
+            >
+              <Settings className="w-4 h-4 mr-1" />
+              Manage
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render vehicle row for list view
+  const renderVehicleRow = (vehicle: Vehicle) => (
+    <tr key={vehicle.id} className="hover:bg-gray-50 transition-colors">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <Car className="w-5 h-5 text-gray-400 mr-3" />
+          <div>
+            <div className="text-sm font-medium text-gray-900">
+              Unit #{vehicle.unit_number}
+            </div>
+            <div className="text-sm text-gray-500">
+              {vehicle.year} {vehicle.make} {vehicle.model}
+            </div>
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(vehicle.status)}`}>
+          {getStatusIcon(vehicle.status)}
+          <span className="ml-1 capitalize">{vehicle.status.replace(/_/g, ' ')}</span>
+        </span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        {vehicle.status === 'assigned' && vehicle.profile ? (
+          <div className="text-sm text-gray-900">
+            {vehicle.profile.full_name}
+            {vehicle.profile.badge_number && (
+              <span className="text-xs text-gray-500 block">Badge: {vehicle.profile.badge_number}</span>
+            )}
+          </div>
+        ) : vehicle.current_location ? (
+          <div className="text-sm text-gray-500">{vehicle.current_location}</div>
+        ) : (
+          <span className="text-sm text-gray-400">—</span>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        {vehicle.is_take_home ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+            Take Home
+          </span>
+        ) : (
+          <span className="text-sm text-gray-400">—</span>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <button
+          onClick={() => handleViewHistory(vehicle)}
+          className="text-gray-600 hover:text-gray-900 mr-4"
+          title="View History"
+        >
+          <History className="w-4 h-4" />
+        </button>
+        {isAdmin && (
+          <button
+            onClick={() => handleEditVehicle(vehicle)}
+            className="text-blue-600 hover:text-blue-900"
+            title="Manage Vehicle"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -159,17 +304,45 @@ function Vehicles() {
   return (
     <>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-2xl font-bold text-gray-900">Fleet Vehicles</h1>
-          {isAdmin && (
-            <button 
-              onClick={handleAddVehicle}
-              className="flex items-center px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Vehicle
-            </button>
-          )}
+          <div className="flex items-center gap-4">
+            {/* View Toggle */}
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'grid'
+                    ? 'bg-white text-blue-800 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4 mr-2" />
+                Grid
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-white text-blue-800 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <List className="w-4 h-4 mr-2" />
+                List
+              </button>
+            </div>
+            
+            {isAdmin && (
+              <button 
+                onClick={handleAddVehicle}
+                className="flex items-center px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Vehicle
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
@@ -207,80 +380,41 @@ function Vehicles() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredVehicles.map((vehicle) => (
-            <div
-              key={vehicle.id}
-              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Unit #{vehicle.unit_number}
-                    </h3>
-                    <p className="text-gray-600">
-                      {vehicle.year} {vehicle.make} {vehicle.model}
-                    </p>
-                  </div>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeClass(vehicle.status)}`}>
-                    {getStatusIcon(vehicle.status)}
-                    <span className="ml-2 capitalize">{vehicle.status.replace(/_/g, ' ')}</span>
-                  </span>
-                </div>
-
-                {vehicle.status === 'assigned' && vehicle.profile && (
-                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      <strong>Assigned to:</strong> {vehicle.profile.full_name}
-                      {vehicle.profile.badge_number && ` (Badge #${vehicle.profile.badge_number})`}
-                    </p>
-                  </div>
-                )}
-
-                {vehicle.status === 'out_of_service' && (
-                  <div className="mb-4 p-3 bg-red-50 rounded-lg">
-                    <p className="text-sm text-red-800">
-                      <strong>Location:</strong> {vehicle.current_location}
-                    </p>
-                    {vehicle.notes && (
-                      <p className="text-sm text-red-800 mt-1">
-                        <strong>Notes:</strong> {vehicle.notes}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {vehicle.is_take_home && (
-                  <div className="mb-4 p-3 bg-green-50 rounded-lg">
-                    <p className="text-sm text-green-800">
-                      <strong>Take Home Unit</strong>
-                    </p>
-                  </div>
-                )}
-
-                <div className="mt-4 flex justify-end gap-4">
-                  <button 
-                    onClick={() => handleViewHistory(vehicle)}
-                    className="flex items-center text-gray-600 hover:text-gray-800 text-sm font-medium"
-                  >
-                    <History className="w-4 h-4 mr-1" />
-                    History
-                  </button>
-                  {isAdmin && (
-                    <button 
-                      onClick={() => handleEditVehicle(vehicle)}
-                      className="flex items-center text-blue-800 hover:text-blue-600 text-sm font-medium"
-                    >
-                      <Settings className="w-4 h-4 mr-1" />
-                      Manage
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Conditional rendering based on view mode */}
+        {viewMode === 'grid' ? (
+          // Grid View
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredVehicles.map(renderVehicleCard)}
+          </div>
+        ) : (
+          // List View
+          <div className="bg-white shadow-md rounded-lg overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Vehicle
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Assignment/Location
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Take Home
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredVehicles.map(renderVehicleRow)}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {filteredVehicles.length === 0 && (
           <div className="text-center py-12">
