@@ -10,7 +10,16 @@ import {
   AlertTriangle,
   Search,
   Filter,
-  Download
+  Download,
+  LayoutGrid,
+  List,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Calendar,
+  Flag,
+  Hash,
+  User
 } from 'lucide-react';
 
 interface WorkOrder {
@@ -45,6 +54,10 @@ interface WorkOrder {
   work_order_number: number | null;
 }
 
+type ViewMode = 'grid' | 'list';
+type SortField = 'work_order_number' | 'unit_number' | 'status' | 'priority' | 'created_at' | 'resolved_at';
+type SortDirection = 'asc' | 'desc';
+
 function WorkOrders() {
   const { session, profile, isAdmin } = useAuthStore();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
@@ -57,6 +70,11 @@ function WorkOrders() {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [updateNotes, setUpdateNotes] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>='desc';
 
   useEffect(() => {
     fetchWorkOrders();
@@ -168,6 +186,53 @@ function WorkOrders() {
     }
   };
 
+  // Handle column header click for sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, set to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sort work orders
+  const sortWorkOrders = (ordersToSort: WorkOrder[]): WorkOrder[] => {
+    return [...ordersToSort].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case 'work_order_number':
+          comparison = (a.work_order_number || 0) - (b.work_order_number || 0);
+          break;
+        case 'unit_number':
+          const unitA = a.vehicle?.unit_number || '';
+          const unitB = b.vehicle?.unit_number || '';
+          comparison = unitA.localeCompare(unitB);
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case 'priority':
+          const priorityOrder = { 'urgent': 0, 'high': 1, 'normal': 2, 'low': 3 };
+          comparison = (priorityOrder[a.priority] || 0) - (priorityOrder[b.priority] || 0);
+          break;
+        case 'created_at':
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+        case 'resolved_at':
+          const timeA = a.resolved_at ? new Date(a.resolved_at).getTime() : 0;
+          const timeB = b.resolved_at ? new Date(b.resolved_at).getTime() : 0;
+          comparison = timeA - timeB;
+          break;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  };
+
   const handleCloseModal = () => {
     setIsUpdateModalOpen(false);
     setSelectedWorkOrder(null);
@@ -240,6 +305,9 @@ function WorkOrders() {
     return matchesStatus && matchesPriority && matchesSearch;
   });
 
+  // Apply sorting to filtered work orders
+  const sortedWorkOrders = sortWorkOrders(filteredWorkOrders);
+
   const handleDownloadPDF = async (workOrder: WorkOrder) => {
     try {
       const { data: completeWorkOrder, error } = await supabase
@@ -264,6 +332,198 @@ function WorkOrders() {
     }
   };
 
+  // Get sort icon for column headers
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 ml-1 text-gray-400" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="w-4 h-4 ml-1 text-blue-600" />
+      : <ArrowDown className="w-4 h-4 ml-1 text-blue-600" />;
+  };
+
+  // Render work order card for grid view
+  const renderWorkOrderCard = (order: WorkOrder) => (
+    <div
+      key={order.id}
+      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+    >
+      <div className="p-6">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Unit #{order.vehicle?.unit_number || 'Unknown'} - WO#{order.work_order_number || 'N/A'}
+              </h3>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityBadgeClass(order.priority)}`}>
+                {order.priority.toUpperCase()}
+              </span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(order.status)}`}>
+                {getStatusIcon(order.status)}
+                <span className="ml-1 capitalize">{order.status.replace(/_/g, ' ')}</span>
+              </span>
+            </div>
+            <p className="text-sm text-gray-600 mt-1">
+              {order.vehicle?.year || 'N/A'} {order.vehicle?.make || 'Unknown'} {order.vehicle?.model || 'Model'}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+          <p className="text-gray-700">{order.description}</p>
+          <p className="text-sm text-gray-600 mt-2">
+            <strong>Location:</strong> {order.location}
+          </p>
+        </div>
+
+        <div className="text-sm text-gray-600">
+          <p>
+            <User className="w-4 h-4 inline-block mr-1" />
+            Created by {order.creator?.full_name || 'Unknown User'}
+            {order.creator?.badge_number && ` (Badge #${order.creator.badge_number})`}
+          </p>
+          <p className="mt-1">
+            <Calendar className="w-4 h-4 inline-block mr-1" />
+            Created: {new Date(order.created_at).toLocaleDateString()}
+          </p>
+          {order.resolved_at && order.resolver && (
+            <p className="mt-1">
+              <CheckCircle2 className="w-4 h-4 inline-block mr-1" />
+              Resolved by {order.resolver.full_name || 'Unknown User'}
+              {' on '}
+              {new Date(order.resolved_at).toLocaleDateString()}
+            </p>
+          )}
+          {order.resolution_notes && (
+            <p className="mt-2 p-2 bg-gray-100 rounded">
+              <strong>Resolution Notes:</strong> {order.resolution_notes}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={() => handleDownloadPDF(order)}
+            className="flex items-center px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-500"
+          >
+            <Download className="w-4 h-4 mr-1" />
+            PDF
+          </button>
+          {isAdmin && ['pending', 'in_progress'].includes(order.status) && (
+            <button
+              onClick={() => {
+                setSelectedWorkOrder(order);
+                setIsUpdateModalOpen(true);
+              }}
+              className="flex items-center px-3 py-1 text-sm bg-blue-800 text-white rounded hover:bg-blue-700"
+            >
+              <AlertTriangle className="w-4 h-4 mr-1" />
+              Update
+            </button>
+          )}
+          {isAdmin && order.status !== 'completed' && order.status !== 'cancelled' && (
+            <button
+              onClick={() => handleCompleteWorkOrder(order)}
+              className="flex items-center px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-500"
+            >
+              <CheckCircle2 className="w-4 h-4 mr-1" />
+              Complete
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render work order row for list view
+  const renderWorkOrderRow = (order: WorkOrder) => (
+    <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm font-medium text-gray-900">
+          WO#{order.work_order_number || 'N/A'}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          Unit #{order.vehicle?.unit_number || 'Unknown'}
+        </div>
+        <div className="text-xs text-gray-500">
+          {order.vehicle?.year || 'N/A'} {order.vehicle?.make || 'Unknown'}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityBadgeClass(order.priority)}`}>
+            {order.priority.toUpperCase()}
+          </span>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(order.status)}`}>
+          {getStatusIcon(order.status)}
+          <span className="ml-1 capitalize">{order.status.replace(/_/g, ' ')}</span>
+        </span>
+      </td>
+      <td className="px-6 py-4">
+        <div className="text-sm text-gray-900 max-w-xs truncate">
+          {order.description}
+        </div>
+        <div className="text-xs text-gray-500">
+          Location: {order.location}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm text-gray-900">
+          {order.creator?.full_name || 'Unknown'}
+        </div>
+        <div className="text-xs text-gray-500">
+          {new Date(order.created_at).toLocaleDateString()}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        {order.resolved_at ? (
+          <div className="text-sm text-gray-900">
+            {order.resolver?.full_name || 'Unknown'}
+          </div>
+        ) : (
+          <span className="text-sm text-gray-400">—</span>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={() => handleDownloadPDF(order)}
+            className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-100"
+            title="Download PDF"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+          {isAdmin && ['pending', 'in_progress'].includes(order.status) && (
+            <button
+              onClick={() => {
+                setSelectedWorkOrder(order);
+                setIsUpdateModalOpen(true);
+              }}
+              className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-100"
+              title="Update Status"
+            >
+              <AlertTriangle className="w-4 h-4" />
+            </button>
+          )}
+          {isAdmin && order.status !== 'completed' && order.status !== 'cancelled' && (
+            <button
+              onClick={() => handleCompleteWorkOrder(order)}
+              className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-100"
+              title="Complete Work Order"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -286,8 +546,34 @@ function WorkOrders() {
   return (
     <>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-2xl font-bold text-gray-900">Work Orders</h1>
+          
+          {/* View Toggle */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'grid'
+                  ? 'bg-white text-blue-800 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4 mr-2" />
+              Grid
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-white text-blue-800 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <List className="w-4 h-4 mr-2" />
+              List
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
@@ -328,105 +614,109 @@ function WorkOrders() {
           </div>
         </div>
 
-        <div className="space-y-4">
-          {filteredWorkOrders.map((order) => (
-            <div
-              key={order.id}
-              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Unit #{order.vehicle?.unit_number || 'Unknown'} - WO#{order.work_order_number || 'N/A'}
-                      </h3>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityBadgeClass(order.priority)}`}>
-                        {order.priority.toUpperCase()}
-                      </span>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(order.status)}`}>
-                        {getStatusIcon(order.status)}
-                        <span className="ml-1 capitalize">{order.status.replace(/_/g, ' ')}</span>
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {order.vehicle?.year || 'N/A'} {order.vehicle?.make || 'Unknown'} {order.vehicle?.model || 'Model'}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleDownloadPDF(order)}
-                      className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-500"
+        {/* Conditional rendering based on view mode */}
+        {viewMode === 'grid' ? (
+          // Grid View
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {sortedWorkOrders.map(renderWorkOrderCard)}
+          </div>
+        ) : (
+          // List View with sorting
+          <div className="bg-white shadow-md rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      onClick={() => handleSort('work_order_number')}
                     >
-                      <Download className="w-4 h-4 mr-1 inline-block" />
-                      Download PDF
-                    </button>
-                    {isAdmin && ['pending', 'in_progress'].includes(order.status) && (
-                      <button
-                        onClick={() => {
-                          setSelectedWorkOrder(order);
-                          setIsUpdateModalOpen(true);
-                        }}
-                        className="px-3 py-1 text-sm bg-blue-800 text-white rounded hover:bg-blue-700"
-                      >
-                        Update Status
-                      </button>
-                    )}
-                    {isAdmin && order.status !== 'completed' && order.status !== 'cancelled' && (
-                      <button
-                        onClick={() => handleCompleteWorkOrder(order)}
-                        className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-500"
-                      >
-                        Complete Work Order
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                  <p className="text-gray-700">{order.description}</p>
-                  <p className="text-sm text-gray-600 mt-2">
-                    <strong>Location:</strong> {order.location}
-                  </p>
-                </div>
-
-                <div className="text-sm text-gray-600">
-                  <p>
-                    Created by {order.creator?.full_name || 'Unknown User'}
-                    {order.creator?.badge_number && ` (Badge #${order.creator.badge_number})`}
-                    {' on '}
-                    {new Date(order.created_at).toLocaleDateString()}
-                  </p>
-                  {order.resolved_at && order.resolver && (
-                    <p className="mt-1">
-                      Resolved by {order.resolver.full_name || 'Unknown User'}
-                      {order.resolver.badge_number && ` (Badge #${order.resolver.badge_number})`}
-                      {' on '}
-                      {new Date(order.resolved_at).toLocaleDateString()}
-                    </p>
-                  )}
-                  {order.resolution_notes && (
-                    <p className="mt-2">
-                      <strong>Resolution Notes:</strong> {order.resolution_notes}
-                    </p>
-                  )}
-                </div>
-              </div>
+                      <div className="flex items-center">
+                        <Hash className="w-4 h-4 mr-1" />
+                        WO #
+                        {getSortIcon('work_order_number')}
+                      </div>
+                    </th>
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      onClick={() => handleSort('unit_number')}
+                    >
+                      <div className="flex items-center">
+                        Vehicle
+                        {getSortIcon('unit_number')}
+                      </div>
+                    </th>
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      onClick={() => handleSort('priority')}
+                    >
+                      <div className="flex items-center">
+                        <Flag className="w-4 h-4 mr-1" />
+                        Priority
+                        {getSortIcon('priority')}
+                      </div>
+                    </th>
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      onClick={() => handleSort('status')}
+                    >
+                      <div className="flex items-center">
+                        Status
+                        {getSortIcon('status')}
+                      </div>
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      onClick={() => handleSort('created_at')}
+                    >
+                      <div className="flex items-center">
+                        <Calendar className="w-4 h-4 mr-1" />
+                        Created
+                        {getSortIcon('created_at')}
+                      </div>
+                    </th>
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      onClick={() => handleSort('resolved_at')}
+                    >
+                      <div className="flex items-center">
+                        Resolved
+                        {getSortIcon('resolved_at')}
+                      </div>
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {sortedWorkOrders.map(renderWorkOrderRow)}
+                </tbody>
+              </table>
             </div>
-          ))}
+          </div>
+        )}
 
-          {filteredWorkOrders.length === 0 && (
-            <div className="text-center py-12">
-              <ClipboardList className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No work orders found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {searchQuery || statusFilter !== 'all' || priorityFilter !== 'all'
-                  ? 'Try adjusting your search or filter criteria'
-                  : 'No work orders have been created yet'}
-              </p>
-            </div>
-          )}
-        </div>
+        {filteredWorkOrders.length === 0 && (
+          <div className="text-center py-12">
+            <ClipboardList className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No work orders found</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {searchQuery || statusFilter !== 'all' || priorityFilter !== 'all'
+                ? 'Try adjusting your search or filter criteria'
+                : 'No work orders have been created yet'}
+            </p>
+          </div>
+        )}
       </div>
 
       {isUpdateModalOpen && selectedWorkOrder && (
