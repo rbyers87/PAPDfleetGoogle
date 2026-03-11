@@ -74,7 +74,7 @@ function WorkOrders() {
   
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('created_at');
-  const [sortDirection, setSortDirection] = useState<SortDirection>='desc';
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   useEffect(() => {
     fetchWorkOrders();
