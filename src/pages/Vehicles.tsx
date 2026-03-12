@@ -1,3 +1,4 @@
+// Find the imports at the top of Vehicles.tsx and replace the entire import block
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
@@ -17,7 +18,8 @@ import {
   ArrowUp,
   ArrowDown,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  ClipboardList  // Add this missing import
 } from 'lucide-react';
 import VehicleModal from '../components/VehicleModal';
 import VehicleHistoryModal from '../components/VehicleHistoryModal';
