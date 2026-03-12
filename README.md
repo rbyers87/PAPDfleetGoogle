@@ -61,3 +61,13 @@ https://rbyers87.github.io/PAPDfleetGoogle/
 
 ✅ From now on, you don’t run npm run deploy manually.
 Just git push, and GitHub builds + deploys the site automatically with your Supabase env vars.
+
+** Vehicles page
+
+* Click once on the "Active Work Orders" column header to sort by work order count (ascending)
+
+* Click again to toggle between ascending and descending
+
+* Double-click to group vehicles by work order status (No Active Work Orders, 1 Active Work Order, 2+ Active Work Orders)
+
+* Use the group controls to expand/collapse or clear the grouping
