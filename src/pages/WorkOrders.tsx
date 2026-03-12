@@ -70,11 +70,21 @@ function WorkOrders() {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [updateNotes, setUpdateNotes] = useState('');
   const [updating, setUpdating] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('list'); //set the default to list instead of grid
+  
+  // View mode with localStorage persistence - default to list
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('workOrdersViewMode');
+    return (saved === 'grid' || saved === 'list') ? saved : 'list';
+  });
   
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  // Save view mode preference to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('workOrdersViewMode', viewMode);
+  }, [viewMode]);
 
   useEffect(() => {
     fetchWorkOrders();
