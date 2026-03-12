@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import VehicleModal from '../components/VehicleModal';
 import VehicleHistoryModal from '../components/VehicleHistoryModal';
+import WorkOrderModal from '../components/WorkOrderModal';
 
 interface Vehicle {
   id: string;
@@ -53,9 +54,17 @@ function Vehicles() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | undefined>(undefined);
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [selectedHistoryVehicle, setSelectedHistoryVehicle] = useState<{ id: string; unitNumber: string } | null>(null);
-  const [showTakeHome, setShowTakeHome] = useState(false);
+const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+const [selectedHistoryVehicle, setSelectedHistoryVehicle] = useState<{ id: string; unitNumber: string } | null>(null);
+const [showTakeHome, setShowTakeHome] = useState(false);
+
+// Add these new state variables after the existing ones
+const [isWorkOrderModalOpen, setIsWorkOrderModalOpen] = useState(false);
+const [selectedWorkOrderVehicle, setSelectedWorkOrderVehicle] = useState<{
+  id: string;
+  unitNumber: string;
+  currentLocation: string;
+} | null>(null);
   
   // View mode with localStorage persistence - default to list
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -108,13 +117,24 @@ function Vehicles() {
     setIsModalOpen(true);
   };
 
-  const handleViewHistory = (vehicle: Vehicle) => {
-    setSelectedHistoryVehicle({
-      id: vehicle.id,
-      unitNumber: vehicle.unit_number
-    });
-    setIsHistoryModalOpen(true);
-  };
+// Find the handleViewHistory function (around line 100-110)
+const handleViewHistory = (vehicle: Vehicle) => {
+  setSelectedHistoryVehicle({
+    id: vehicle.id,
+    unitNumber: vehicle.unit_number
+  });
+  setIsHistoryModalOpen(true);
+};
+
+// Add this new handler function after handleViewHistory
+const handleCreateWorkOrder = (vehicle: Vehicle) => {
+  setSelectedWorkOrderVehicle({
+    id: vehicle.id,
+    unitNumber: vehicle.unit_number,
+    currentLocation: vehicle.current_location || 'Unknown Location'
+  });
+  setIsWorkOrderModalOpen(true);
+};
 
   // Handle column header click for sorting
   const handleSort = (field: SortField) => {
@@ -315,145 +335,159 @@ function Vehicles() {
     return null;
   };
 
-  // Render vehicle card for grid view
-  const renderVehicleCard = (vehicle: Vehicle) => (
-    <div
-      key={vehicle.id}
-      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-    >
-      <div className="p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Unit #{vehicle.unit_number}
-            </h3>
-            <p className="text-gray-600">
-              {vehicle.year} {vehicle.make} {vehicle.model}
-            </p>
-          </div>
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeClass(vehicle.status)}`}>
-            {getStatusIcon(vehicle.status)}
-            <span className="ml-2 capitalize">{vehicle.status.replace(/_/g, ' ')}</span>
-          </span>
+// Find the renderVehicleCard function (around line 360-380) and replace the buttons section
+const renderVehicleCard = (vehicle: Vehicle) => (
+  <div
+    key={vehicle.id}
+    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+  >
+    <div className="p-6">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Unit #{vehicle.unit_number}
+          </h3>
+          <p className="text-gray-600">
+            {vehicle.year} {vehicle.make} {vehicle.model}
+          </p>
         </div>
+        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeClass(vehicle.status)}`}>
+          {getStatusIcon(vehicle.status)}
+          <span className="ml-2 capitalize">{vehicle.status.replace(/_/g, ' ')}</span>
+        </span>
+      </div>
 
-        {vehicle.status === 'assigned' && vehicle.profile && (
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Assigned to:</strong> {vehicle.profile.full_name}
-              {vehicle.profile.badge_number && ` (Badge #${vehicle.profile.badge_number})`}
+      {vehicle.status === 'assigned' && vehicle.profile && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <strong>Assigned to:</strong> {vehicle.profile.full_name}
+            {vehicle.profile.badge_number && ` (Badge #${vehicle.profile.badge_number})`}
+          </p>
+        </div>
+      )}
+
+      {vehicle.status === 'out_of_service' && (
+        <div className="mb-4 p-3 bg-red-50 rounded-lg">
+          <p className="text-sm text-red-800">
+            <strong>Location:</strong> {vehicle.current_location}
+          </p>
+          {vehicle.notes && (
+            <p className="text-sm text-red-800 mt-1">
+              <strong>Notes:</strong> {vehicle.notes}
             </p>
-          </div>
-        )}
-
-        {vehicle.status === 'out_of_service' && (
-          <div className="mb-4 p-3 bg-red-50 rounded-lg">
-            <p className="text-sm text-red-800">
-              <strong>Location:</strong> {vehicle.current_location}
-            </p>
-            {vehicle.notes && (
-              <p className="text-sm text-red-800 mt-1">
-                <strong>Notes:</strong> {vehicle.notes}
-              </p>
-            )}
-          </div>
-        )}
-
-        {vehicle.is_take_home && (
-          <div className="mb-4 p-3 bg-green-50 rounded-lg">
-            <p className="text-sm text-green-800">
-              <strong>Take Home Unit</strong>
-            </p>
-          </div>
-        )}
-
-        <div className="mt-4 flex justify-end gap-4">
-          <button 
-            onClick={() => handleViewHistory(vehicle)}
-            className="flex items-center text-gray-600 hover:text-gray-800 text-sm font-medium"
-          >
-            <History className="w-4 h-4 mr-1" />
-            History
-          </button>
-          {isAdmin && (
-            <button 
-              onClick={() => handleEditVehicle(vehicle)}
-              className="flex items-center text-blue-800 hover:text-blue-600 text-sm font-medium"
-            >
-              <Settings className="w-4 h-4 mr-1" />
-              Manage
-            </button>
           )}
         </div>
-      </div>
-    </div>
-  );
+      )}
 
-  // Render vehicle row for list view
-  const renderVehicleRow = (vehicle: Vehicle) => (
-    <tr key={vehicle.id} className="hover:bg-gray-50 transition-colors">
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="flex items-center">
-          <Car className="w-5 h-5 text-gray-400 mr-3" />
-          <div>
-            <div className="text-sm font-medium text-gray-900">
-              Unit #{vehicle.unit_number}
-            </div>
-            <div className="text-sm text-gray-500">
-              {vehicle.year} {vehicle.make} {vehicle.model}
-            </div>
-          </div>
+      {vehicle.is_take_home && (
+        <div className="mb-4 p-3 bg-green-50 rounded-lg">
+          <p className="text-sm text-green-800">
+            <strong>Take Home Unit</strong>
+          </p>
         </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(vehicle.status)}`}>
-          {getStatusIcon(vehicle.status)}
-          <span className="ml-1 capitalize">{vehicle.status.replace(/_/g, ' ')}</span>
-        </span>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        {vehicle.status === 'assigned' && vehicle.profile ? (
-          <div className="text-sm text-gray-900">
-            {vehicle.profile.full_name}
-            {vehicle.profile.badge_number && (
-              <span className="text-xs text-gray-500 block">Badge: {vehicle.profile.badge_number}</span>
-            )}
-          </div>
-        ) : vehicle.current_location ? (
-          <div className="text-sm text-gray-500">{vehicle.current_location}</div>
-        ) : (
-          <span className="text-sm text-gray-400">—</span>
-        )}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        {vehicle.is_take_home ? (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-            Take Home
-          </span>
-        ) : (
-          <span className="text-sm text-gray-400">—</span>
-        )}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-        <button
+      )}
+
+      <div className="mt-4 flex justify-end gap-4">
+        <button 
           onClick={() => handleViewHistory(vehicle)}
-          className="text-gray-600 hover:text-gray-900 mr-4"
-          title="View History"
+          className="flex items-center text-gray-600 hover:text-gray-800 text-sm font-medium"
         >
-          <History className="w-4 h-4" />
+          <History className="w-4 h-4 mr-1" />
+          History
+        </button>
+        <button 
+          onClick={() => handleCreateWorkOrder(vehicle)}
+          className="flex items-center text-green-600 hover:text-green-700 text-sm font-medium"
+        >
+          <ClipboardList className="w-4 h-4 mr-1" />
+          Create Work Order
         </button>
         {isAdmin && (
-          <button
+          <button 
             onClick={() => handleEditVehicle(vehicle)}
-            className="text-blue-600 hover:text-blue-900"
-            title="Manage Vehicle"
+            className="flex items-center text-blue-800 hover:text-blue-600 text-sm font-medium"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-4 h-4 mr-1" />
+            Manage
           </button>
         )}
-      </td>
-    </tr>
-  );
+      </div>
+    </div>
+  </div>
+);
+
+// Find the renderVehicleRow function (around line 420-430) and replace the actions column
+const renderVehicleRow = (vehicle: Vehicle) => (
+  <tr key={vehicle.id} className="hover:bg-gray-50 transition-colors">
+    <td className="px-6 py-4 whitespace-nowrap">
+      <div className="flex items-center">
+        <Car className="w-5 h-5 text-gray-400 mr-3" />
+        <div>
+          <div className="text-sm font-medium text-gray-900">
+            Unit #{vehicle.unit_number}
+          </div>
+          <div className="text-sm text-gray-500">
+            {vehicle.year} {vehicle.make} {vehicle.model}
+          </div>
+        </div>
+      </div>
+    </td>
+    <td className="px-6 py-4 whitespace-nowrap">
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(vehicle.status)}`}>
+        {getStatusIcon(vehicle.status)}
+        <span className="ml-1 capitalize">{vehicle.status.replace(/_/g, ' ')}</span>
+      </span>
+    </td>
+    <td className="px-6 py-4 whitespace-nowrap">
+      {vehicle.status === 'assigned' && vehicle.profile ? (
+        <div className="text-sm text-gray-900">
+          {vehicle.profile.full_name}
+          {vehicle.profile.badge_number && (
+            <span className="text-xs text-gray-500 block">Badge: {vehicle.profile.badge_number}</span>
+          )}
+        </div>
+      ) : vehicle.current_location ? (
+        <div className="text-sm text-gray-500">{vehicle.current_location}</div>
+      ) : (
+        <span className="text-sm text-gray-400">—</span>
+      )}
+    </td>
+    <td className="px-6 py-4 whitespace-nowrap">
+      {vehicle.is_take_home ? (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+          Take Home
+        </span>
+      ) : (
+        <span className="text-sm text-gray-400">—</span>
+      )}
+    </td>
+    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+      <button
+        onClick={() => handleViewHistory(vehicle)}
+        className="text-gray-600 hover:text-gray-900 mr-2"
+        title="View History"
+      >
+        <History className="w-4 h-4" />
+      </button>
+      <button
+        onClick={() => handleCreateWorkOrder(vehicle)}
+        className="text-green-600 hover:text-green-900 mr-2"
+        title="Create Work Order"
+      >
+        <ClipboardList className="w-4 h-4" />
+      </button>
+      {isAdmin && (
+        <button
+          onClick={() => handleEditVehicle(vehicle)}
+          className="text-blue-600 hover:text-blue-900"
+          title="Manage Vehicle"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
+      )}
+    </td>
+  </tr>
+);
 
   // Render grouped list view
   const renderGroupedList = () => {
@@ -717,6 +751,7 @@ function Vehicles() {
         )}
       </div>
 
+// Find the closing part of the component where the modals are rendered (around line 680-690)
       <VehicleModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -733,6 +768,20 @@ function Vehicles() {
           }}
           vehicleId={selectedHistoryVehicle.id}
           unitNumber={selectedHistoryVehicle.unitNumber}
+        />
+      )}
+
+      {/* Add this new WorkOrderModal */}
+      {selectedWorkOrderVehicle && (
+        <WorkOrderModal
+          isOpen={isWorkOrderModalOpen}
+          onClose={() => {
+            setIsWorkOrderModalOpen(false);
+            setSelectedWorkOrderVehicle(null);
+          }}
+          vehicleId={selectedWorkOrderVehicle.id}
+          unitNumber={selectedWorkOrderVehicle.unitNumber}
+          currentLocation={selectedWorkOrderVehicle.currentLocation}
         />
       )}
     </>
