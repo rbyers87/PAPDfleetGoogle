@@ -46,9 +46,9 @@ interface Vehicle {
 }
 
 type ViewMode = 'grid' | 'list';
-type SortField = 'unit_number' | 'status' | 'assignment' | 'take_home';
+type SortField = 'unit_number' | 'status' | 'assignment' | 'take_home' | 'work_orders';
 type SortDirection = 'asc' | 'desc';
-type GroupField = 'status' | 'take_home' | null;
+type GroupField = 'status' | 'take_home' | 'work_orders' | null;
 
 function Vehicles() {
   const { isAdmin } = useAuthStore();
@@ -119,6 +119,13 @@ function Vehicles() {
     return vehicle.work_orders.filter(wo => 
       wo.status === 'pending' || wo.status === 'in_progress'
     ).length;
+  };
+
+  const getWorkOrderGroupKey = (vehicle: Vehicle): string => {
+    const count = getActiveWorkOrderCount(vehicle);
+    if (count === 0) return 'No Active Work Orders';
+    if (count === 1) return '1 Active Work Order';
+    return `${count} Active Work Orders`;
   };
 
   const hasActiveWorkOrders = (vehicle: Vehicle): boolean => {
@@ -212,6 +219,8 @@ function Vehicles() {
           return vehicle.status.replace(/_/g, ' ');
         case 'take_home':
           return vehicle.is_take_home ? 'Take Home' : 'Non-Take Home';
+        case 'work_orders':
+          return getWorkOrderGroupKey(vehicle);
         default:
           return '';
       }
@@ -265,6 +274,11 @@ function Vehicles() {
         case 'take_home':
           comparison = (a.is_take_home === b.is_take_home) ? 0 : a.is_take_home ? -1 : 1;
           break;
+        case 'work_orders':
+          const countA = getActiveWorkOrderCount(a);
+          const countB = getActiveWorkOrderCount(b);
+          comparison = countA - countB;
+          break;
       }
       
       return sortDirection === 'asc' ? comparison : -comparison;
@@ -289,6 +303,9 @@ function Vehicles() {
           break;
         case 'take_home':
           key = vehicle.is_take_home ? 'Take Home' : 'Non-Take Home';
+          break;
+        case 'work_orders':
+          key = getWorkOrderGroupKey(vehicle);
           break;
       }
       
@@ -710,7 +727,11 @@ function Vehicles() {
         {/* Group controls for list view */}
         {viewMode === 'list' && groupField && (
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-600">Grouped by: {groupField === 'status' ? 'Status' : 'Take Home'}</span>
+            <span className="text-gray-600">Grouped by: {
+              groupField === 'status' ? 'Status' : 
+              groupField === 'take_home' ? 'Take Home' : 
+              'Active Work Orders'
+            }</span>
             <button
               onClick={expandAllGroups}
               className="text-blue-600 hover:text-blue-800 text-xs font-medium"
@@ -770,10 +791,14 @@ function Vehicles() {
                     </th>
                     <th 
                       scope="col" 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      onClick={() => handleSort('work_orders')}
+                      onDoubleClick={() => handleGroup('work_orders')}
                     >
                       <div className="flex items-center">
                         Active Work Orders
+                        {getSortIcon('work_orders')}
+                        {getGroupIndicator('work_orders')}
                       </div>
                     </th>
                     <th 
