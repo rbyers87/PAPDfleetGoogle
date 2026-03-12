@@ -70,7 +70,7 @@ function WorkOrders() {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [updateNotes, setUpdateNotes] = useState('');
   const [updating, setUpdating] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('list'); //set the default to list instead of grid
   
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('created_at');
