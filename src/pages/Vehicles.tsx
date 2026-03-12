@@ -56,13 +56,23 @@ function Vehicles() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedHistoryVehicle, setSelectedHistoryVehicle] = useState<{ id: string; unitNumber: string } | null>(null);
   const [showTakeHome, setShowTakeHome] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('list'); //set the default view to list instead of grid
+  
+  // View mode with localStorage persistence - default to list
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('vehiclesViewMode');
+    return (saved === 'grid' || saved === 'list') ? saved : 'list';
+  });
   
   // Sorting and grouping state
   const [sortField, setSortField] = useState<SortField>('unit_number');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [groupField, setGroupField] = useState<GroupField>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  // Save view mode preference to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('vehiclesViewMode', viewMode);
+  }, [viewMode]);
 
   useEffect(() => {
     fetchVehicles();
@@ -631,64 +641,66 @@ function Vehicles() {
         ) : (
           // List View with sorting and grouping
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
-                    onClick={() => handleSort('unit_number')}
-                    onDoubleClick={() => handleGroup(null)} // Double-click to clear grouping
-                  >
-                    <div className="flex items-center">
-                      Vehicle
-                      {getSortIcon('unit_number')}
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
-                    onClick={() => handleSort('status')}
-                    onDoubleClick={() => handleGroup('status')}
-                  >
-                    <div className="flex items-center">
-                      Status
-                      {getSortIcon('status')}
-                      {getGroupIndicator('status')}
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
-                    onClick={() => handleSort('assignment')}
-                    onDoubleClick={() => handleGroup(null)}
-                  >
-                    <div className="flex items-center">
-                      Assignment/Location
-                      {getSortIcon('assignment')}
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
-                    onClick={() => handleSort('take_home')}
-                    onDoubleClick={() => handleGroup('take_home')}
-                  >
-                    <div className="flex items-center">
-                      Take Home
-                      {getSortIcon('take_home')}
-                      {getGroupIndicator('take_home')}
-                    </div>
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {renderGroupedList()}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      onClick={() => handleSort('unit_number')}
+                      onDoubleClick={() => handleGroup(null)}
+                    >
+                      <div className="flex items-center">
+                        Vehicle
+                        {getSortIcon('unit_number')}
+                      </div>
+                    </th>
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      onClick={() => handleSort('status')}
+                      onDoubleClick={() => handleGroup('status')}
+                    >
+                      <div className="flex items-center">
+                        Status
+                        {getSortIcon('status')}
+                        {getGroupIndicator('status')}
+                      </div>
+                    </th>
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      onClick={() => handleSort('assignment')}
+                      onDoubleClick={() => handleGroup(null)}
+                    >
+                      <div className="flex items-center">
+                        Assignment/Location
+                        {getSortIcon('assignment')}
+                      </div>
+                    </th>
+                    <th 
+                      scope="col" 
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700"
+                      onClick={() => handleSort('take_home')}
+                      onDoubleClick={() => handleGroup('take_home')}
+                    >
+                      <div className="flex items-center">
+                        Take Home
+                        {getSortIcon('take_home')}
+                        {getGroupIndicator('take_home')}
+                      </div>
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {renderGroupedList()}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
