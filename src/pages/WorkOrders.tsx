@@ -1,3 +1,4 @@
+// Find the imports at the top of WorkOrders.tsx (around line 1-10)
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
