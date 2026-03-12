@@ -56,7 +56,7 @@ function Vehicles() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedHistoryVehicle, setSelectedHistoryVehicle] = useState<{ id: string; unitNumber: string } | null>(null);
   const [showTakeHome, setShowTakeHome] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('list'); //set the default view to list instead of grid
   
   // Sorting and grouping state
   const [sortField, setSortField] = useState<SortField>('unit_number');
